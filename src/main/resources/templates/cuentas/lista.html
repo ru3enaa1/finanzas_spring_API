@@ -1,0 +1,91 @@
+﻿<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cuentas - Pfm</title>
+    <link rel="stylesheet" th:href="@{/css/creacion-cuentas.css}">
+</head>
+<body>
+<div class="dashboard">
+    <aside class="sidebar">
+        <div class="logo">
+            <a th:href="@{/dashboard}">
+                <img th:src="@{/img/2.png}" alt="Pfm Logo">
+            </a>
+        </div>
+        <nav class="menu">
+            <a th:href="@{/dashboard}">
+                <span class="icon">&#x1F4C8;</span> Tablero
+            </a>
+            <a th:href="@{/cuentas}" class="active">
+                <span class="icon">&#x1F4B3;</span> Cuentas
+            </a>
+            <a th:href="@{/gastos-fijos}">
+                <span class="icon">&#x1F4B8;</span> Gastos fijos
+            </a>
+            <a th:href="@{/transacciones}">
+                <span class="icon">&#x1F4B0;</span> Transacciones
+            </a>
+            <a th:href="@{/logout}">
+                <span class="icon">&#x1F512;</span> Cerrar sesion
+            </a>
+        </nav>
+    </aside>
+
+    <main class="main-content">
+        <header class="topbar">
+            <div class="progress">
+                <span class="piggy">&#x1F4B5;</span>
+                <span class="progress-text" th:text="${saldoTotal != null ? #numbers.formatDecimal(saldoTotal, 1, 'COMMA', 2, 'POINT') : '0,00'}"></span>
+            </div>
+            <div class="user">
+                <span th:text="${usuarioActual}"></span>
+            </div>
+        </header>
+
+        <section class="form-box">
+            <h2>Agregar nueva cuenta</h2>
+            <div class="alert success" th:if="${mensajeExito != null}" th:text="${mensajeExito}"></div>
+            <div class="alert error" th:if="${mensajeError != null}" th:text="${mensajeError}"></div>
+
+            <form th:action="@{/cuentas}" th:object="${cuenta}" method="post">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                <label>
+                    <input type="text" th:field="*{tipo}" placeholder="Tipo de cuenta" required>
+                    <span class="error" th:if="${#fields.hasErrors('tipo')}" th:errors="*{tipo}"></span>
+                </label>
+                <label>
+                    <input type="number" step="0.01" min="0" th:field="*{saldo}" placeholder="Saldo inicial" required>
+                    <span class="error" th:if="${#fields.hasErrors('saldo')}" th:errors="*{saldo}"></span>
+                </label>
+                <button type="submit">Guardar</button>
+            </form>
+        </section>
+
+        <section class="accounts-list">
+            <h2>Tus cuentas</h2>
+            <div class="cards" th:if="${!#lists.isEmpty(cuentas)}">
+                <article class="account-card" th:each="cuentaItem : ${cuentas}">
+                    <h3 th:text="${cuentaItem.tipo}"></h3>
+                    <p>Saldo: <strong th:text="${#numbers.formatDecimal(cuentaItem.saldo, 1, 'COMMA', 2, 'POINT')}"></strong></p>
+                    <div class="account-actions">
+                        <form th:action="@{'/cuentas/' + ${cuentaItem.id} + '/actualizar'}" method="post" class="inline-form">
+                            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                            <input type="text" name="tipo" th:value="${cuentaItem.tipo}" required>
+                            <input type="number" step="0.01" min="0" name="saldo" th:value="${cuentaItem.saldo}" required>
+                            <button type="submit">Actualizar</button>
+                        </form>
+                        <form th:action="@{'/cuentas/' + ${cuentaItem.id} + '/eliminar'}" method="post" class="inline-form" onsubmit="return confirm('Deseas eliminar la cuenta?');">
+                            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                            <button type="submit" class="danger">Eliminar</button>
+                        </form>
+                    </div>
+                </article>
+            </div>
+            <p th:if="${#lists.isEmpty(cuentas)}">Aun no has creado cuentas.</p>
+        </section>
+    </main>
+</div>
+</body>
+</html>

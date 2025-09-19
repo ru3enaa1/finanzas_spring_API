@@ -1,0 +1,108 @@
+﻿<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gastos fijos - Pfm</title>
+    <link rel="stylesheet" th:href="@{/css/transacciones.css}">
+</head>
+<body>
+<div class="dashboard">
+    <aside class="sidebar">
+        <div class="logo">
+            <a th:href="@{/dashboard}">
+                <img th:src="@{/img/2.png}" alt="Pfm Logo">
+            </a>
+        </div>
+        <nav class="menu">
+            <a th:href="@{/dashboard}">
+                <span class="icon">&#x1F4C8;</span> Tablero
+            </a>
+            <a th:href="@{/cuentas}">
+                <span class="icon">&#x1F4B3;</span> Cuentas
+            </a>
+            <a th:href="@{/gastos-fijos}" class="active">
+                <span class="icon">&#x1F4B8;</span> Gastos fijos
+            </a>
+            <a th:href="@{/transacciones}">
+                <span class="icon">&#x1F4B0;</span> Transacciones
+            </a>
+            <a th:href="@{/logout}">
+                <span class="icon">&#x1F512;</span> Cerrar sesion
+            </a>
+        </nav>
+    </aside>
+
+    <main class="main-content">
+        <header class="topbar">
+            <h1>Gastos fijos</h1>
+            <div class="user">
+                <span th:text="${usuarioActual}"></span>
+            </div>
+        </header>
+
+        <section class="form-section">
+            <h2>Registrar gasto fijo</h2>
+            <div class="alert success" th:if="${mensajeExito != null}" th:text="${mensajeExito}"></div>
+            <div class="alert error" th:if="${mensajeError != null}" th:text="${mensajeError}"></div>
+
+            <form th:action="@{/gastos-fijos}" th:object="${gasto}" method="post" class="form-grid">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                <label>
+                    Nombre
+                    <input type="text" th:field="*{nombre}" placeholder="Nombre del gasto" required>
+                    <span class="error" th:if="${#fields.hasErrors('nombre')}" th:errors="*{nombre}"></span>
+                </label>
+                <label>
+                    Categoria
+                    <input type="text" th:field="*{categoria}" placeholder="Ej: Servicios">
+                </label>
+                <label>
+                    Monto estimado
+                    <input type="number" step="0.01" min="0" th:field="*{montoEstimado}" required>
+                    <span class="error" th:if="${#fields.hasErrors('montoEstimado')}" th:errors="*{montoEstimado}"></span>
+                </label>
+                <label>
+                    Dia de vencimiento
+                    <input type="number" min="1" max="31" th:field="*{diaVencimiento}">
+                </label>
+                <label class="full">
+                    Descripcion
+                    <textarea th:field="*{descripcion}" rows="3" placeholder="Detalles opcionales"></textarea>
+                </label>
+                <label class="checkbox">
+                    <input type="checkbox" th:field="*{activo}"> Activo
+                </label>
+                <div class="form-actions">
+                    <button type="submit">Guardar</button>
+                </div>
+            </form>
+        </section>
+
+        <section class="list-section">
+            <h2>Listado</h2>
+            <div class="cards" th:if="${!#lists.isEmpty(gastos)}">
+                <article class="card" th:each="gastoItem : ${gastos}">
+                    <header>
+                        <h3 th:text="${gastoItem.nombre}"></h3>
+                        <span class="status" th:text="${gastoItem.activo ? 'Activo' : 'Inactivo'}" th:classappend="${gastoItem.activo} ? ' status-active' : ' status-inactive'"></span>
+                    </header>
+                    <p>Categoria: <strong th:text="${gastoItem.categoria != null ? gastoItem.categoria : 'N/A'}"></strong></p>
+                    <p>Monto estimado: <strong th:text="${#numbers.formatDecimal(gastoItem.montoEstimado, 1, 'COMMA', 2, 'POINT')}"></strong></p>
+                    <p th:if="${gastoItem.diaVencimiento != null}">Vence cada dia <strong th:text="${gastoItem.diaVencimiento}"></strong></p>
+                    <p th:if="${gastoItem.descripcion != null}" th:text="${gastoItem.descripcion}"></p>
+                    <div class="card-actions">
+                        <a class="btn" th:href="@{'/gastos-fijos/' + ${gastoItem.id} + '/registros'}">Ver registros</a>
+                        <form th:action="@{'/gastos-fijos/' + ${gastoItem.id} + '/eliminar'}" method="post" onsubmit="return confirm('Eliminar gasto fijo?');">
+                            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                            <button type="submit" class="danger">Eliminar</button>
+                        </form>
+                    </div>
+                </article>
+            </div>
+            <p th:if="${#lists.isEmpty(gastos)}">No hay gastos fijos registrados.</p>
+        </section>
+    </main>
+</div>
+</body>
+</html>

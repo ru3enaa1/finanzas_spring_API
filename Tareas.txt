@@ -1,0 +1,13 @@
+Elementos para tener en cuenta:  
+● Para la codificación del módulo debe tener en cuenta los artefactos del ciclo del software realizados con 
+anterioridad: diagrama de clases, diagramas de casos de uso, historias de usuario, diseños, prototipos, 
+Informe técnico de plan de trabajo para construcción de software con tecnologías seleccionadas etc.  
+● El código debe contener comentarios  
+● El código debe cumplir con estándares de codificación   
+● Se debe crear el proyecto utilizando   herramientas de versionamiento.  
+Lineamientos generales para la entrega de la evidencia:   
+● Productos para entregar: carpeta comprimida que debe tener los siguientes archivos:  
+○ archivos del proyecto,   
+○ archivo con enlace del repositorio, la carpeta comprimida debe tener el nombre del aprendiz y 
+número de la evidencia así: NOMBRE_APELLIDO_AA3_EV01  
+● Extensión: ZIP, RAR.

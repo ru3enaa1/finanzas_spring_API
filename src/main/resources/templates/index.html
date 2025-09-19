@@ -1,0 +1,103 @@
+﻿<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pfm - Gestion Financiera Personal</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" th:href="@{/css/styles.css}">
+    <script th:src="@{/js/scripts.js}" defer></script>
+</head>
+<body>
+<header>
+    <div class="logo">
+        <img th:src="@{/img/1.png}" alt="Pfm">
+    </div>
+    <nav>
+        <ul>
+            <li><a href="#acerca">Acerca</a></li>
+            <li><a href="#servicios">Servicios</a></li>
+            <li><a th:href="@{/auth/login}" class="login">Iniciar sesion</a></li>
+            <li><a th:href="@{/auth/register}" class="register">Registrarse</a></li>
+        </ul>
+    </nav>
+</header>
+<section class="hero" id="acerca">
+    <div class="hero-content">
+        <h1>Administra tu dinero</h1>
+        <h2>Finanzas simples, futuro seguro</h2>
+        <p>Tu aliado confiable para administrar tus finanzas. Visualiza gastos, organiza tus cuentas y toma mejores decisiones financieras.</p>
+        <a th:href="@{/auth/register}" class="btn">Empieza ahora</a>
+    </div>
+    <div class="hero-image">
+        <img th:src="@{/img/Finances.png}" alt="Finanzas">
+    </div>
+</section>
+<section class="features" id="servicios">
+    <div class="feature">
+        <h3>Registrar transacciones</h3>
+    </div>
+    <div class="feature">
+        <h3>Creacion de presupuesto</h3>
+    </div>
+    <div class="feature">
+        <h3>Generacion de informes</h3>
+    </div>
+    <div class="feature">
+        <h3>Alertas y recordatorios</h3>
+    </div>
+    <div class="feature">
+        <h3>Centro de ayuda</h3>
+    </div>
+</section>
+<section class="control">
+    <h2>Lleva el control de tu dinero</h2>
+    <div class="control-cards">
+        <div class="card">
+            <img th:src="@{/img/Shiny Happy Stats and Graphs.png}" alt="Finanzas a tu Alcance">
+            <h3>Finanzas a tu alcance</h3>
+            <p>Controla tus finanzas desde cualquier lugar con nuestra app responsive.</p>
+            <a th:href="@{/auth/login}" class="btn small">Descubre mas</a>
+        </div>
+        <div class="card">
+            <img th:src="@{/img/E-commerce.png}" alt="Ahorra y Gana">
+            <h3>Ahorra y gana</h3>
+            <p>Gana claridad sobre tus metas y recibe alertas de seguimiento.</p>
+            <a th:href="@{/auth/register}" class="btn small">Empieza a ahorrar</a>
+        </div>
+        <div class="card">
+            <img th:src="@{/img/Dayflow Torso.png}" alt="Financiamiento Inteligente">
+            <h3>Financiamiento inteligente</h3>
+            <p>Organiza pagos futuros y monitorea tus compromisos fijos.</p>
+            <a th:href="@{/auth/login}" class="btn small">Conoce mas</a>
+        </div>
+    </div>
+</section>
+<section class="faq">
+    <h2>Respondemos tus dudas</h2>
+    <div class="faq-questions">
+        <div class="faq-question">
+            <h3>Como puedo crear una cuenta?</h3>
+            <p>Solo necesitas registrarte con tu correo y contrasena para comenzar.</p>
+        </div>
+        <div class="faq-question">
+            <h3>Es segura mi informacion financiera?</h3>
+            <p>Aplicamos cifrado de contrasenas y sesiones protegidas para tus datos.</p>
+        </div>
+        <div class="faq-question">
+            <h3>Como contacto soporte?</h3>
+            <p>Escribenos desde el panel de ayuda disponible tras iniciar sesion.</p>
+        </div>
+        <div class="faq-question">
+            <h3>Como restablezco mi contrasena?</h3>
+            <p>Usa la opcion "Olvide mi contrasena" desde la pantalla de inicio de sesion.</p>
+        </div>
+    </div>
+</section>
+<footer class="footer">
+    <p>&copy; <span th:text="${#dates.format(#dates.createNow(), 'yyyy')}"></span> Pfm - Finanzas personales. Todos los derechos reservados.</p>
+</footer>
+</body>
+</html>

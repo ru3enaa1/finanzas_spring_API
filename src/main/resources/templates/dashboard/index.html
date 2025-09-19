@@ -1,0 +1,105 @@
+﻿<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel - Pfm</title>
+    <link rel="stylesheet" th:href="@{/css/dashboard.css}">
+</head>
+<body>
+<div class="dashboard">
+    <aside class="sidebar">
+        <div class="logo">
+            <a th:href="@{/dashboard}">
+                <img th:src="@{/img/2.png}" alt="Pfm Logo">
+            </a>
+        </div>
+        <nav class="menu">
+            <a th:href="@{/dashboard}" th:classappend="${#httpServletRequest.requestURI == '/dashboard'} ? ' active'">
+                <span class="icon">&#x1F4C8;</span> Tablero
+            </a>
+            <a th:href="@{/cuentas}" th:classappend="${#httpServletRequest.requestURI.startsWith('/cuentas')} ? ' active'">
+                <span class="icon">&#x1F4B3;</span> Cuentas
+            </a>
+            <a th:href="@{/gastos-fijos}" th:classappend="${#httpServletRequest.requestURI.startsWith('/gastos-fijos')} ? ' active'">
+                <span class="icon">&#x1F4B8;</span> Gastos fijos
+            </a>
+            <a th:href="@{/transacciones}" th:classappend="${#httpServletRequest.requestURI.startsWith('/transacciones')} ? ' active'">
+                <span class="icon">&#x1F4B0;</span> Transacciones
+            </a>
+            <a th:href="@{/logout}">
+                <span class="icon">&#x1F512;</span> Cerrar sesion
+            </a>
+        </nav>
+    </aside>
+
+    <main class="main-content">
+        <header class="topbar">
+            <div class="progress">
+                <span class="piggy">&#x1F4B5;</span>
+                <span class="progress-text" th:text="${saldoTotal != null ? #numbers.formatDecimal(saldoTotal, 1, 'COMMA', 2, 'POINT') : '0,00'}"></span>
+            </div>
+            <div class="user">
+                <span th:text="${usuario.nombre != null ? usuario.nombre : usuario.correo}"></span>
+            </div>
+        </header>
+
+        <section class="info-card">
+            <div class="info-text">
+                <h3 th:text="${'Hola ' + (usuario.nombre != null ? usuario.nombre : usuario.correo)}"></h3>
+                <p>Estas son tus finanzas para <span th:text="${#temporals.format(periodoActual.atDay(1), 'MMMM', new java.util.Locale('es', 'CO'))}"></span> / <span th:text="${anioActual}"></span>.</p>
+                <p>Revisa tus cuentas y marca los gastos fijos pagados para mantener tus balances actualizados.</p>
+            </div>
+            <div class="info-img">
+                <img th:src="@{/img/wallet.png}" alt="Wallet">
+            </div>
+        </section>
+
+        <section class="cards-grid">
+            <article class="card resumen">
+                <h4>Resumen de cuentas</h4>
+                <ul>
+                    <li th:each="cuenta : ${cuentas}">
+                        <span th:text="${cuenta.tipo}"></span>
+                        <strong th:text="${#numbers.formatDecimal(cuenta.saldo, 1, 'COMMA', 2, 'POINT')}"></strong>
+                    </li>
+                    <li th:if="${#lists.isEmpty(cuentas)}">Aun no tienes cuentas registradas.</li>
+                </ul>
+                <a class="card-link" th:href="@{/cuentas}">Gestionar cuentas</a>
+            </article>
+
+            <article class="card resumen">
+                <h4>Gastos fijos pendientes</h4>
+                <ul>
+                    <li th:each="gasto : ${gastosPendientes}">
+                        <span th:text="${gasto.nombre}"></span>
+                        <strong th:text="${#numbers.formatDecimal(gasto.montoEstimado, 1, 'COMMA', 2, 'POINT')}"></strong>
+                    </li>
+                    <li th:if="${#lists.isEmpty(gastosPendientes)}">Todo al dia. Bien hecho!</li>
+                </ul>
+                <a class="card-link" th:href="@{/gastos-fijos}">Administrar gastos fijos</a>
+            </article>
+
+            <article class="card resumen">
+                <h4>Transacciones recientes</h4>
+                <ul>
+                    <li th:each="transaccion : ${transaccionesRecientes}">
+                        <span>
+                            <strong th:text="${transaccion.tipo}"></strong>
+                            <span th:text="${#temporals.format(transaccion.fecha, 'dd/MM')}"></span>
+                        </span>
+                        <strong th:text="${#numbers.formatDecimal(transaccion.monto, 1, 'COMMA', 2, 'POINT')}"></strong>
+                    </li>
+                    <li th:if="${#lists.isEmpty(transaccionesRecientes)}">Aun no registras movimientos.</li>
+                </ul>
+                <a class="card-link" th:href="@{/transacciones}">Ver todas las transacciones</a>
+            </article>
+        </section>
+
+        <section class="graphic">
+            <img th:src="@{/img/BG.png}" alt="Resumen grafico">
+        </section>
+    </main>
+</div>
+</body>
+</html>
