@@ -40,12 +40,14 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.ignoringRequestMatchers("/api/**"))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/", "/index", "/auth/register", "/css/**", "/js/**", "/img/**", "/imagenes/**").permitAll()
-                        .requestMatchers("/auth/login", "/error", "/database/**").permitAll()
+                        .requestMatchers("/auth/login", "/login", "/error", "/database/**").permitAll()
+                        .requestMatchers("/api/auth/register", "/api/auth/login").permitAll()
                         .requestMatchers("/api/**").authenticated()
                         .anyRequest().authenticated()
                 )
                 .formLogin(form -> form
                         .loginPage("/auth/login")
+                        .loginProcessingUrl("/auth/login")
                         .usernameParameter("correo")
                         .passwordParameter("contrasena")
                         .defaultSuccessUrl("/dashboard", true)
@@ -68,5 +70,3 @@ public class SecurityConfig {
         return http.build();
     }
 }
-
-

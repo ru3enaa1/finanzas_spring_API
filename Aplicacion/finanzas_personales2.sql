@@ -109,6 +109,9 @@ CREATE TABLE `gasto_fijo` (
   `nombre` varchar(50) NOT NULL,
   `monto_estimado` decimal(10,2) NOT NULL,
   `categoria` varchar(50) DEFAULT NULL,
+  `descripcion` varchar(200) DEFAULT NULL,
+  `dia_vencimiento` tinyint DEFAULT NULL,
+  `activo` tinyint(1) NOT NULL DEFAULT '1',
   PRIMARY KEY (`id`),
   KEY `usuario_id` (`usuario_id`),
   CONSTRAINT `gasto_fijo_ibfk_1` FOREIGN KEY (`usuario_id`) REFERENCES `usuario` (`id`)
@@ -311,10 +314,10 @@ CREATE TABLE `usuario` (
   `nombre` varchar(50) NOT NULL,
   `apellido` varchar(40) DEFAULT NULL,
   `correo` varchar(50) NOT NULL,
-  `contrasena` varchar(50) NOT NULL,
+  `contrasena` varchar(255) NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `correo` (`correo`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -323,6 +326,7 @@ CREATE TABLE `usuario` (
 
 LOCK TABLES `usuario` WRITE;
 /*!40000 ALTER TABLE `usuario` DISABLE KEYS */;
+INSERT INTO `usuario` VALUES (1,'Ruben','Alzate','rubenagudeloalzate@gmail.com','$2a$10$Zo1.H6c5kkaDnQgxS9YWfOuU851JYNcSDneDwVS0l2ZsdxFmyyDhm'),(2,'Adriana Maria','Alzate','adrianaalzate999@gmail.com','$2a$10$M/.lwZBnplkO9HgizFYj.e2LbDvauDsmmacP4ZGYaMX5VQgWkgq4.');
 /*!40000 ALTER TABLE `usuario` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
@@ -335,4 +339,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-09-16 19:18:49
+-- Dump completed on 2025-09-22 14:22:50

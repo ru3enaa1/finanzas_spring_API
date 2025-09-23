@@ -22,12 +22,12 @@ public class UsuarioService {
     }
 
     public Usuario registrar(Usuario usuario) {
-        String rawPassword = usuario.getContrasena();
-        if (rawPassword.length() < 12 || rawPassword.length() > 50) {
-            throw new IllegalArgumentException("La contraseña debe tener entre 12 y 50 caracteres");
-        }
+        String rawPassword = usuario.getContrasenaPlano();
+        validarLongitudPassword(rawPassword);
         usuario.setContrasena(passwordEncoder.encode(rawPassword));
-        return usuarioRepository.save(usuario);
+        Usuario guardado = usuarioRepository.save(usuario);
+        guardado.setContrasenaPlano(null);
+        return guardado;
     }
 
     public Optional<Usuario> buscarPorCorreo(String correo) {
@@ -38,15 +38,23 @@ public class UsuarioService {
         return usuarioRepository.existsByCorreo(correo);
     }
 
+    /**
+     * Valida las credenciales recibidas desde la API y devuelve el usuario cuando son correctas.
+     */
+    public Optional<Usuario> autenticar(String correo, String contrasena) {
+        return usuarioRepository.findByCorreo(correo)
+                .filter(usuario -> passwordEncoder.matches(contrasena, usuario.getContrasena()));
+    }
+
     public Usuario actualizarPerfil(Usuario usuario, boolean actualizarPassword) {
         if (actualizarPassword) {
-            String rawPassword = usuario.getContrasena();
-            if (rawPassword.length() < 12 || rawPassword.length() > 50) {
-                throw new IllegalArgumentException("La contraseña debe tener entre 12 y 50 caracteres");
-            }
+            String rawPassword = usuario.getContrasenaPlano();
+            validarLongitudPassword(rawPassword);
             usuario.setContrasena(passwordEncoder.encode(rawPassword));
         }
-        return usuarioRepository.save(usuario);
+        Usuario actualizado = usuarioRepository.save(usuario);
+        actualizado.setContrasenaPlano(null);
+        return actualizado;
     }
 
     public List<Usuario> listar() {
@@ -55,5 +63,11 @@ public class UsuarioService {
 
     public void eliminar(Integer id) {
         usuarioRepository.deleteById(id);
+    }
+
+    private void validarLongitudPassword(String rawPassword) {
+        if (rawPassword == null || rawPassword.length() < 12 || rawPassword.length() > 50) {
+            throw new IllegalArgumentException("La contrasena debe tener entre 12 y 50 caracteres");
+        }
     }
 }

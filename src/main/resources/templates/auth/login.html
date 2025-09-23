@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
@@ -22,7 +22,7 @@
         <div class="alert error" th:if="${param.error != null}">Correo o contrasena incorrecta</div>
         <div class="alert info" th:if="${param.logout != null}">Sesion cerrada correctamente</div>
 
-        <form th:action="@{/login}" method="post">
+        <form th:action="@{/auth/login}" method="post">
             <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
             <div class="input-group">
                 <input type="email" name="correo" placeholder="Correo" required autofocus>
@@ -42,3 +42,4 @@
 </div>
 </body>
 </html>
+

@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
@@ -39,9 +39,9 @@
                 <input type="email" th:field="*{correo}" placeholder="Correo" required>
                 <div class="error" th:if="${#fields.hasErrors('correo')}" th:errors="*{correo}"></div>
             </div>
-            <div class="input-group" th:classappend="${#fields.hasErrors('contrasena')} ? ' has-error'">
-                <input type="password" th:field="*{contrasena}" placeholder="Contrasena" required>
-                <div class="error" th:if="${#fields.hasErrors('contrasena')}" th:errors="*{contrasena}"></div>
+            <div class="input-group" th:classappend="${#fields.hasErrors('contrasenaPlano')} ? ' has-error'">
+                <input type="password" th:field="*{contrasenaPlano}" placeholder="Contrasena" required>
+                <div class="error" th:if="${#fields.hasErrors('contrasenaPlano')}" th:errors="*{contrasenaPlano}"></div>
             </div>
             <button type="submit">Registrarse</button>
         </form>

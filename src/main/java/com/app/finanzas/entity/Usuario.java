@@ -8,6 +8,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -38,10 +39,13 @@ public class Usuario {
     @Column(nullable = false, unique = true, length = 50)
     private String correo;
 
+    @Transient
     @NotBlank
-    @Column(nullable = false, length = 50)
+    @Size(min = 12, max = 50)
+    private String contrasenaPlano;
+
+    @Column(nullable = false, length = 255)
     private String contrasena;
-        @Size(min = 12, max = 50)
 
     @OneToMany(mappedBy = "usuario", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<Cuenta> cuentas = new LinkedHashSet<>();
@@ -79,6 +83,14 @@ public class Usuario {
 
     public void setCorreo(String correo) {
         this.correo = correo;
+    }
+
+    public String getContrasenaPlano() {
+        return contrasenaPlano;
+    }
+
+    public void setContrasenaPlano(String contrasenaPlano) {
+        this.contrasenaPlano = contrasenaPlano;
     }
 
     public String getContrasena() {

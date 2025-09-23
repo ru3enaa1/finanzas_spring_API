@@ -18,7 +18,10 @@ import org.springframework.web.bind.annotation.GetMapping;
 
 import java.math.BigDecimal;
 import java.time.YearMonth;
+import java.time.format.DateTimeFormatter;
+import java.time.format.TextStyle;
 import java.util.List;
+import java.util.Locale;
 import java.util.stream.Collectors;
 
 @Controller
@@ -51,6 +54,9 @@ public class DashboardController {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         YearMonth periodoActual = YearMonth.now();
+        Locale localeEsCo = new Locale("es", "CO");
+        DateTimeFormatter fechaCortaFormatter = DateTimeFormatter.ofPattern("dd/MM").withLocale(localeEsCo);
+        String mesActual = periodoActual.getMonth().getDisplayName(TextStyle.FULL, localeEsCo);
         List<GastoFijo> gastosPendientes = gastoFijoService.listarActivosPorUsuario(usuario).stream()
                 .filter(gasto -> estaPendiente(gasto, periodoActual))
                 .collect(Collectors.toList());
@@ -62,6 +68,8 @@ public class DashboardController {
         model.addAttribute("saldoTotal", saldoTotal);
         model.addAttribute("periodoActual", periodoActual);
         model.addAttribute("anioActual", periodoActual.getYear());
+        model.addAttribute("mesActual", mesActual);
+        model.addAttribute("formateadorFechaTransaccion", fechaCortaFormatter);
         model.addAttribute("gastosPendientes", gastosPendientes);
         model.addAttribute("transaccionesRecientes", transaccionesRecientes);
 

@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
@@ -15,16 +15,20 @@
             </a>
         </div>
         <nav class="menu">
-            <a th:href="@{/dashboard}" th:classappend="${#httpServletRequest.requestURI == '/dashboard'} ? ' active'">
+            <a th:href="@{/dashboard}"
+               th:classappend="${activePath == '/dashboard' ? ' active' : ''}">
                 <span class="icon">&#x1F4C8;</span> Tablero
             </a>
-            <a th:href="@{/cuentas}" th:classappend="${#httpServletRequest.requestURI.startsWith('/cuentas')} ? ' active'">
+            <a th:href="@{/cuentas}"
+               th:classappend="${#strings.startsWith(activePath, '/cuentas') ? ' active' : ''}">
                 <span class="icon">&#x1F4B3;</span> Cuentas
             </a>
-            <a th:href="@{/gastos-fijos}" th:classappend="${#httpServletRequest.requestURI.startsWith('/gastos-fijos')} ? ' active'">
+            <a th:href="@{/gastos-fijos}"
+               th:classappend="${#strings.startsWith(activePath, '/gastos-fijos') ? ' active' : ''}">
                 <span class="icon">&#x1F4B8;</span> Gastos fijos
             </a>
-            <a th:href="@{/transacciones}" th:classappend="${#httpServletRequest.requestURI.startsWith('/transacciones')} ? ' active'">
+            <a th:href="@{/transacciones}"
+               th:classappend="${#strings.startsWith(activePath, '/transacciones') ? ' active' : ''}">
                 <span class="icon">&#x1F4B0;</span> Transacciones
             </a>
             <a th:href="@{/logout}">
@@ -47,7 +51,10 @@
         <section class="info-card">
             <div class="info-text">
                 <h3 th:text="${'Hola ' + (usuario.nombre != null ? usuario.nombre : usuario.correo)}"></h3>
-                <p>Estas son tus finanzas para <span th:text="${#temporals.format(periodoActual.atDay(1), 'MMMM', new java.util.Locale('es', 'CO'))}"></span> / <span th:text="${anioActual}"></span>.</p>
+                <p>Estas son tus finanzas para
+                    <span th:text="${mesActual}"></span>
+                    / <span th:text="${anioActual}"></span>.
+                </p>
                 <p>Revisa tus cuentas y marca los gastos fijos pagados para mantener tus balances actualizados.</p>
             </div>
             <div class="info-img">
@@ -86,7 +93,7 @@
                     <li th:each="transaccion : ${transaccionesRecientes}">
                         <span>
                             <strong th:text="${transaccion.tipo}"></strong>
-                            <span th:text="${#temporals.format(transaccion.fecha, 'dd/MM')}"></span>
+                            <span th:text="${transaccion.fecha != null ? transaccion.fecha.format(formateadorFechaTransaccion) : ''}"></span>
                         </span>
                         <strong th:text="${#numbers.formatDecimal(transaccion.monto, 1, 'COMMA', 2, 'POINT')}"></strong>
                     </li>
@@ -103,3 +110,4 @@
 </div>
 </body>
 </html>
+

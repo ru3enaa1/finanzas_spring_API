@@ -19,8 +19,7 @@ public class FinanzasUserDetailsService implements UserDetailsService {
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         return usuarioRepository.findByCorreo(username)
-                .map(usuario -> User.builder()
-                        .username(usuario.getCorreo())
+                .map(usuario -> User.withUsername(usuario.getCorreo())
                         .password(usuario.getContrasena())
                         .roles("USER")
                         .build())
