@@ -41,8 +41,8 @@
 mvnw.cmd spring-boot:run
 ```
 
-## Como probar la nueva API
-1. Levanta la aplicacion (ver comando anterior).
+## Como probar la nueva API Pasos a seguir...
+1. Levanta la aplicacion
 2. En Postman envia `POST http://localhost:8080/api/auth/register` con cuerpo JSON:
    ```json
    {
@@ -52,11 +52,3 @@ mvnw.cmd spring-boot:run
      "contrasena": "claveSegura123"
    }
    ```
-3. Inicia sesion con `POST http://localhost:8080/api/auth/login` y el mismo cuerpo (sin el campo `apellido`).
-4. Confirma que recibes mensajes de exito y que los estados HTTP son 201 (registro) y 200 (login). Un error 401 indicara credenciales invalidas.
-
-## Tag recomendado
-Tras validar, crear etiqueta:
-```bash
-git tag -a v2.1.0 -m "Version 2.1 - API de autenticacion"
-```
