@@ -1,10 +1,25 @@
-HELP.md
+# ──────────────────────────────────────────────
+# Build / target / compilados
+# ──────────────────────────────────────────────
 target/
+build/
+compiled/
+HELP.md
 .mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/
 
-### STS ###
+# ──────────────────────────────────────────────
+# IDEs / editores
+# ──────────────────────────────────────────────
+.idea/
+*.iws
+*.iml
+*.ipr
+.vscode/
+.claude/
+
+# Spring Tool Suite
 .apt_generated
 .classpath
 .factorypath
@@ -13,21 +28,53 @@ target/
 .springBeans
 .sts4-cache
 
-### IntelliJ IDEA ###
-.idea
-*.iws
-*.iml
-*.ipr
-
-### NetBeans ###
+# NetBeans
 /nbproject/private/
 /nbbuild/
 /dist/
 /nbdist/
 /.nb-gradle/
-build/
-!**/src/main/**/build/
-!**/src/test/**/build/
 
-### VS Code ###
-.vscode/
+# ──────────────────────────────────────────────
+# Sistema operativo
+# ──────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ──────────────────────────────────────────────
+# Configuracion local con secrets
+# ──────────────────────────────────────────────
+# application.properties contiene credenciales reales — NO publicar
+# El template publico esta en application.properties.example
+src/main/resources/application.properties
+src/main/resources/application-local.properties
+local.properties
+.env
+.env.local
+
+# ──────────────────────────────────────────────
+# Dumps de BD con datos reales (correos, hashes, transacciones de usuarios)
+# Solo se publica el schema limpio en database/schema.sql
+# ──────────────────────────────────────────────
+database/finanzas_personales2.sql
+database/finanzas_personales_nuevo.sql
+database/*_backup.sql
+database/*_dump.sql
+Aplicacion/
+
+# ──────────────────────────────────────────────
+# Documentos academicos / personales del autor
+# ──────────────────────────────────────────────
+*.xlsx
+CONTEXTO_PROYECTO.md
+Descripcion_app.txt
+PROJECT_URLS.txt
+All_requirements.txt
+Requerimientos.txt
+Tareas.txt
+App.txt
+
+# ──────────────────────────────────────────────
+# Imagenes locales (mockups, screenshots)
+# ──────────────────────────────────────────────
+imagenes/

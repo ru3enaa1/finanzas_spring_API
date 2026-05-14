@@ -40,7 +40,14 @@ public class CuentaService {
         return cuentaRepository.findById(id);
     }
 
+    public Optional<Cuenta> buscarPorIdYUsuario(Integer id, Usuario usuario) {
+        return cuentaRepository.findByIdAndUsuario(id, usuario);
+    }
+
     public void ajustarSaldo(Cuenta cuenta, BigDecimal nuevoSaldo) {
+        // Ajustar saldoInicial para mantener la invariante saldo = saldoInicial + sum(transacciones)
+        BigDecimal diff = nuevoSaldo.subtract(cuenta.getSaldo());
+        cuenta.setSaldoInicial(cuenta.getSaldoInicial().add(diff));
         cuenta.setSaldo(nuevoSaldo);
         cuentaRepository.save(cuenta);
     }

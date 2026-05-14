@@ -1,131 +1,639 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Transacciones - Pfm</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" th:href="@{/css/layout.css}">
     <link rel="stylesheet" th:href="@{/css/transacciones.css}">
 </head>
 <body>
-<div class="dashboard">
-    <aside class="sidebar">
-        <div class="logo">
-            <a th:href="@{/dashboard}">
-                <img th:src="@{/img/2.png}" alt="Pfm Logo">
-            </a>
-        </div>
-        <nav class="menu">
-            <a th:href="@{/dashboard}">
-                <span class="icon">&#x1F4C8;</span> Tablero
-            </a>
-            <a th:href="@{/cuentas}">
-                <span class="icon">&#x1F4B3;</span> Cuentas
-            </a>
-            <a th:href="@{/gastos-fijos}">
-                <span class="icon">&#x1F4B8;</span> Gastos fijos
-            </a>
-            <a th:href="@{/transacciones}" class="active">
-                <span class="icon">&#x1F4B0;</span> Transacciones
-            </a>
-            <a th:href="@{/logout}">
-                <span class="icon">&#x1F512;</span> Cerrar sesion
-            </a>
-        </nav>
-    </aside>
+<div class="app-layout">
 
-    <main class="main-content">
-        <header class="topbar">
-            <h1>Transacciones</h1>
-            <div class="user">
-                <span th:text="${#authentication.name}"></span>
-            </div>
-        </header>
+    <aside th:replace="~{fragments/sidebar :: sidebar}"></aside>
 
-        <section class="form-section">
-            <h2>Registrar movimiento</h2>
+    <div class="main-wrapper">
+        <header th:replace="~{fragments/topbar :: topbar}"></header>
+
+        <div class="content-scroll">
+
+            <!-- Mensajes de estado -->
             <div class="alert success" th:if="${mensajeExito != null}" th:text="${mensajeExito}"></div>
-            <div class="alert error" th:if="${mensajeError != null}" th:text="${mensajeError}"></div>
+            <div class="alert error"   th:if="${mensajeError != null}" th:text="${mensajeError}"></div>
 
-            <form th:action="@{/transacciones}" th:object="${transaccion}" method="post" class="form-grid">
+            <!-- Header: + / lapiz / saldo cuenta activa + moneda -->
+            <div class="txn-header">
+                <div class="header-actions">
+                    <button class="btn-icon" id="btnNuevo"
+                            th:disabled="${cuentas == null || #lists.isEmpty(cuentas)}"
+                            onclick="abrirModalNuevo()" title="Nuevo movimiento">+</button>
+                    <button class="btn-icon" id="btnEditar"
+                            th:disabled="${agrupadas.isEmpty()}"
+                            onclick="toggleEditMode()" title="Eliminar movimientos">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24"
+                             fill="none" stroke="currentColor" stroke-width="2.2"
+                             stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="header-balance">
+                    <div class="balance-info">
+                        <span class="balance-account-name" th:text="${cuentaActivaNombre}"></span>
+                        <div class="balance-amount">
+                            <span class="balance-symbol" th:text="${simboloMoneda}">$</span>
+                            <span class="balance-number"
+                                  th:text="${#numbers.formatDecimal(saldoCuentaActiva, 1, 'COMMA', 2, 'POINT')}">0,00</span>
+                        </div>
+                    </div>
+                    <span class="balance-moneda" th:text="${monedaActual}">COP</span>
+                </div>
+            </div>
+
+            <!-- Dropdowns de filtro: periodo + categoria/presupuesto -->
+            <div class="txn-summary">
+
+                <!-- Pill 1: Periodo -->
+                <div class="summary-pill pill-period" id="pillPeriodo">
+                    <button type="button" class="pill-trigger" onclick="togglePillDropdown('periodo')">
+                        <div class="pill-content">
+                            <span class="pill-label" id="lblPeriodo">Este mes</span>
+                            <span class="pill-summary">
+                                <span class="pill-mini pill-mini-in"  id="miniIngresos">+0,00</span>
+                                <span class="pill-mini pill-mini-out" id="miniGastos">-0,00</span>
+                            </span>
+                        </div>
+                        <svg class="pill-caret" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+                             fill="none" stroke="currentColor" stroke-width="2.5"
+                             stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="6 9 12 15 18 9"/>
+                        </svg>
+                    </button>
+                    <div class="pill-menu" id="menuPeriodo">
+                        <button type="button" class="pill-option" data-periodo="hoy"     onclick="setPeriodo('hoy')">Hoy</button>
+                        <button type="button" class="pill-option" data-periodo="semana"  onclick="setPeriodo('semana')">Esta semana</button>
+                        <button type="button" class="pill-option active" data-periodo="mes" onclick="setPeriodo('mes')">Este mes</button>
+                        <button type="button" class="pill-option" data-periodo="todo"    onclick="setPeriodo('todo')">Todo</button>
+                    </div>
+                </div>
+
+                <!-- Pill 2: Filtro categoria/presupuesto -->
+                <div class="summary-pill pill-filter" id="pillFiltro">
+                    <button type="button" class="pill-trigger" onclick="togglePillDropdown('filtro')">
+                        <div class="pill-content">
+                            <span class="pill-label" id="lblFiltro">Todos</span>
+                            <span class="pill-summary">
+                                <span class="pill-mini pill-mini-count" id="miniCount">0 movimientos</span>
+                            </span>
+                        </div>
+                        <svg class="pill-caret" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+                             fill="none" stroke="currentColor" stroke-width="2.5"
+                             stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="6 9 12 15 18 9"/>
+                        </svg>
+                    </button>
+                    <div class="pill-menu" id="menuFiltro">
+                        <button type="button" class="pill-option active" data-filtro="todo"
+                                data-label="Todos" onclick="setFiltroFromBtn(this)">Todos</button>
+                        <button type="button" class="pill-option" data-filtro="ingresos"
+                                data-label="Solo ingresos" onclick="setFiltroFromBtn(this)">Solo ingresos</button>
+                        <button type="button" class="pill-option" data-filtro="gastos"
+                                data-label="Solo gastos" onclick="setFiltroFromBtn(this)">Solo gastos</button>
+                        <div class="pill-divider" th:if="${!#lists.isEmpty(presupuestos)}"></div>
+                        <div class="pill-menu-section" th:if="${!#lists.isEmpty(presupuestos)}">Presupuestos</div>
+                        <button type="button" class="pill-option"
+                                th:each="p : ${presupuestos}"
+                                th:attr="data-filtro=${'p:' + p.id},data-label=${p.nombre}"
+                                onclick="setFiltroFromBtn(this)"
+                                th:text="${p.nombre}"></button>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Titulo del historial -->
+            <h2 class="section-title">Historial de movimientos</h2>
+
+            <!-- Timeline agrupado por fecha -->
+            <div class="txn-timeline" id="timeline">
+
+                <div th:each="entry : ${agrupadas}"
+                     class="date-group"
+                     th:attr="data-fecha=${#temporals.format(entry.key, 'yyyy-MM-dd')}">
+
+                    <div class="date-label">
+                        <span th:text="${#temporals.format(entry.key, 'dd/MM/yyyy')}"></span>
+                    </div>
+
+                    <div th:each="t : ${entry.value}"
+                         class="txn-row"
+                         th:classappend="${t.tipo.name() == 'INGRESO'} ? ' txn-ingreso' : ' txn-gasto'"
+                         th:attr="data-tipo=${t.tipo.name()},
+                                  data-pid=${t.presupuesto != null ? t.presupuesto.id : ''},
+                                  data-monto=${t.monto.multiply(tasaActual)},
+                                  data-fecha-row=${#temporals.format(entry.key, 'yyyy-MM-dd')}">
+
+                        <!-- Icono de direccion -->
+                        <div class="txn-icon">
+                            <svg th:if="${t.tipo.name() == 'INGRESO'}"
+                                 xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                                 fill="none" stroke="currentColor" stroke-width="2.5"
+                                 stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="7" y1="17" x2="17" y2="7"/>
+                                <polyline points="7 7 17 7 17 17"/>
+                            </svg>
+                            <svg th:if="${t.tipo.name() == 'GASTO'}"
+                                 xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                                 fill="none" stroke="currentColor" stroke-width="2.5"
+                                 stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="17" y1="7" x2="7" y2="17"/>
+                                <polyline points="17 17 7 17 7 7"/>
+                            </svg>
+                        </div>
+
+                        <!-- Categoria + hora -->
+                        <div class="txn-info">
+                            <span class="txn-cat" th:text="${t.categoria}"></span>
+                            <small class="txn-time"
+                                   th:text="${t.fechaRegistro != null ? #temporals.format(t.fechaRegistro, 'HH:mm') : ''}"></small>
+                        </div>
+
+                        <!-- Referencia de presupuesto -->
+                        <div class="txn-ref-wrap">
+                            <span class="txn-budget-icon" th:if="${t.presupuesto != null}"
+                                  th:attr="data-color=${t.presupuesto.color}">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24"
+                                     fill="none" stroke="currentColor" stroke-width="2.5"
+                                     stroke-linecap="round" stroke-linejoin="round">
+                                    <rect x="2" y="7" width="20" height="14" rx="2"/>
+                                    <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/>
+                                </svg>
+                            </span>
+                            <span class="txn-ref"
+                                  th:text="${'De ' + (t.presupuesto != null ? t.presupuesto.nombre : t.categoria)}"></span>
+                        </div>
+
+                        <!-- Monto (convertido a moneda activa) -->
+                        <span class="txn-amount"
+                              th:classappend="${t.tipo.name() == 'INGRESO'} ? ' amount-ingreso' : ' amount-gasto'"
+                              th:text="${(t.tipo.name() == 'INGRESO' ? '+' : '-') + #numbers.formatDecimal(t.monto.multiply(tasaActual), 1, 'COMMA', 2, 'POINT')}">
+                        </span>
+
+                        <!-- Eliminar (modo edicion) -->
+                        <div class="txn-delete-action">
+                            <form th:action="@{'/transacciones/' + ${t.id} + '/eliminar'}" method="post"
+                                  onsubmit="return confirm('¿Eliminar movimiento?');">
+                                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                                <button type="submit" class="btn-txn-delete">×</button>
+                            </form>
+                        </div>
+
+                    </div>
+                </div>
+
+                <div class="empty-msg" th:if="${agrupadas.isEmpty()}">
+                    Aun sin movimientos. Usa el boton <strong>+</strong> para registrar.
+                </div>
+
+                <div class="empty-msg" id="emptyFiltered" style="display:none">
+                    No hay movimientos para el filtro seleccionado.
+                </div>
+
+            </div><!-- /timeline -->
+
+        </div><!-- /content-scroll -->
+    </div><!-- /main-wrapper -->
+</div><!-- /app-layout -->
+
+<!-- ====================================================
+     MODAL: Nuevo movimiento (2 pasos, simplificado)
+     ==================================================== -->
+<div class="modal-overlay" id="modalOverlay">
+    <div class="modal-box" onclick="event.stopPropagation()">
+
+        <!-- PASO 1: Elegir tipo -->
+        <div id="paso1">
+            <h3 class="modal-title">Nuevo movimiento</h3>
+            <div class="type-selector">
+
+                <button type="button" class="type-card type-ingreso" onclick="seleccionarTipo('INGRESO')">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24"
+                         fill="none" stroke="currentColor" stroke-width="2.2"
+                         stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="7" y1="17" x2="17" y2="7"/>
+                        <polyline points="7 7 17 7 17 17"/>
+                    </svg>
+                    Ingreso
+                </button>
+
+                <button type="button" class="type-card type-gasto" onclick="seleccionarTipo('GASTO')">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24"
+                         fill="none" stroke="currentColor" stroke-width="2.2"
+                         stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="17" y1="7" x2="7" y2="17"/>
+                        <polyline points="17 17 7 17 7 7"/>
+                    </svg>
+                    Gasto
+                </button>
+
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn-modal-cancel" onclick="cerrarModal()">Cancelar</button>
+            </div>
+        </div>
+
+        <!-- PASO 2: Formulario simplificado -->
+        <div id="paso2" style="display:none">
+
+            <div class="modal-back" onclick="volverPaso1()">← Volver</div>
+            <h3 class="modal-title" id="paso2Titulo">Ingreso</h3>
+
+            <form id="frmTransaccion" th:action="@{/transacciones}" th:object="${transaccion}" method="post">
                 <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
-                <label>
-                    Cuenta
-                    <select th:field="*{cuenta.id}" required>
-                        <option value="" disabled selected>Selecciona una cuenta</option>
-                        <option th:each="cuentaItem : ${cuentas}" th:value="${cuentaItem.id}" th:text="${cuentaItem.tipo}"></option>
-                    </select>
-                    <span class="error" th:if="${#fields.hasErrors('cuenta.id')}" th:errors="*{cuenta.id}"></span>
-                </label>
-                <label>
-                    Tipo
-                    <select th:field="*{tipo}" required>
-                        <option value="" disabled selected>Selecciona</option>
-                        <option th:each="tipoItem : ${tipos}" th:value="${tipoItem}" th:text="${tipoItem}"></option>
-                    </select>
-                    <span class="error" th:if="${#fields.hasErrors('tipo')}" th:errors="*{tipo}"></span>
-                </label>
-                <label>
-                    Categoria
-                    <input type="text" th:field="*{categoria}" placeholder="Ej: Cine" required>
-                    <span class="error" th:if="${#fields.hasErrors('categoria')}" th:errors="*{categoria}"></span>
-                </label>
-                <label>
-                    Fecha
-                    <input type="date" th:field="*{fecha}" required>
-                    <span class="error" th:if="${#fields.hasErrors('fecha')}" th:errors="*{fecha}"></span>
-                </label>
-                <label>
-                    Monto
-                    <input type="number" step="0.01" min="0.01" th:field="*{monto}" required>
-                    <span class="error" th:if="${#fields.hasErrors('monto')}" th:errors="*{monto}"></span>
-                </label>
-                <label class="full">
-                    Descripcion
-                    <textarea th:field="*{descripcion}" rows="2" placeholder="Opcional"></textarea>
-                </label>
-                <label class="checkbox">
-                    <input type="checkbox" th:field="*{fijo}"> Marcar como gasto fijo
-                </label>
-                <div class="form-actions">
-                    <button type="submit">Guardar</button>
+
+                <!-- Tipo (set por JS) -->
+                <input type="hidden" th:field="*{tipo}">
+                <!-- Categoria (set por JS desde los selectores) -->
+                <input type="hidden" name="categoria" id="campoCategoria">
+
+                <div class="modal-fields">
+
+                    <!-- INGRESO: tipo de ingreso predefinido -->
+                    <label id="lblTipoIngreso" style="display:none">
+                        Tipo de ingreso
+                        <select id="selectTipoIngreso" onchange="onIngresoChange(this.value)">
+                            <option value="" disabled selected>Selecciona</option>
+                            <option th:each="cat : ${categoriasIngreso}"
+                                    th:value="${cat}" th:text="${cat}"></option>
+                        </select>
+                    </label>
+
+                    <!-- GASTO: seleccionar presupuesto (opcional) -->
+                    <label id="lblPresupuesto" style="display:none">
+                        Añadir a presupuesto
+                        <select id="selectPresupuesto" name="presupuestoId"
+                                onchange="onPresupuestoChange(this)">
+                            <option value="">Sin presupuesto</option>
+                            <option th:each="p : ${presupuestos}"
+                                    th:value="${p.id}" th:text="${p.nombre}"></option>
+                        </select>
+                    </label>
+
+                    <!-- GASTO sin presupuesto: categoria libre -->
+                    <label id="lblCategoriaLibre" style="display:none">
+                        Categoria del gasto
+                        <input type="text" id="inputCategoriaLibre"
+                               placeholder="Ej: Transporte, Comida" maxlength="50"
+                               oninput="onCategoriaLibreInput(this.value)">
+                    </label>
+
+                    <!-- Monto (siempre en COP, la moneda base) -->
+                    <label>
+                        Monto <small style="color:rgba(255,255,255,0.4);font-weight:400">(en COP)</small>
+                        <div class="input-prefix">
+                            <span>COP&nbsp;$</span>
+                            <input type="number" th:field="*{monto}"
+                                   step="0.01" min="0.01" placeholder="0.00" required>
+                        </div>
+                        <span class="field-error"
+                              th:if="${#fields.hasErrors('monto')}"
+                              th:errors="*{monto}"></span>
+                    </label>
+
+                    <!-- Mas opciones (colapsable) -->
+                    <div class="advanced-toggle">
+                        <button type="button" class="advanced-link" onclick="toggleAdvanced()">
+                            <span id="advancedCaret">▸</span> Más opciones
+                        </button>
+                    </div>
+
+                    <div id="advancedFields" class="advanced-fields" style="display:none">
+                        <!-- Fecha personalizada (disabled por defecto: si vacia, no se envia) -->
+                        <label>
+                            Fecha
+                            <input type="date" name="fecha" id="campoFecha" disabled
+                                   oninput="onFechaInput(this)">
+                            <span class="field-error"
+                                  th:if="${#fields.hasErrors('fecha')}"
+                                  th:errors="*{fecha}"></span>
+                        </label>
+
+                        <!-- Descripcion opcional -->
+                        <label>
+                            Descripción
+                            <input type="text" name="descripcion" id="campoDescripcion"
+                                   placeholder="Opcional" maxlength="100">
+                        </label>
+                    </div>
+
+                </div>
+
+                <!-- Confirmacion de cuenta activa -->
+                <div class="account-confirm">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+                         fill="none" stroke="currentColor" stroke-width="2"
+                         stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="2" y="5" width="20" height="14" rx="2"/>
+                        <line x1="2" y1="10" x2="22" y2="10"/>
+                    </svg>
+                    <span>Se registrará en
+                        <strong th:text="${cuentaActivaNombre != null ? cuentaActivaNombre : 'Sin cuenta activa'}"></strong>
+                    </span>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="btn-modal-cancel" onclick="cerrarModal()">Cancelar</button>
+                    <button type="submit" class="btn-modal-save">Guardar</button>
                 </div>
             </form>
-        </section>
+        </div><!-- /paso2 -->
 
-        <section class="list-section">
-            <h2>Historial</h2>
-            <table class="records" th:if="${!#lists.isEmpty(transacciones)}">
-                <thead>
-                <tr>
-                    <th>Fecha</th>
-                    <th>Cuenta</th>
-                    <th>Tipo</th>
-                    <th>Categoria</th>
-                    <th>Monto</th>
-                    <th>Descripcion</th>
-                    <th></th>
-                </tr>
-                </thead>
-                <tbody>
-                <tr th:each="transaccionItem : ${transacciones}">
-                    <td th:text="${#temporals.format(transaccionItem.fecha, 'dd/MM/yyyy')}"></td>
-                    <td th:text="${transaccionItem.cuenta.tipo}"></td>
-                    <td th:text="${transaccionItem.tipo}"></td>
-                    <td th:text="${transaccionItem.categoria}"></td>
-                    <td th:text="${#numbers.formatDecimal(transaccionItem.monto, 1, 'COMMA', 2, 'POINT')}"></td>
-                    <td th:text="${transaccionItem.descripcion}"></td>
-                    <td>
-                        <form th:action="@{'/transacciones/' + ${transaccionItem.id} + '/eliminar'}" method="post" onsubmit="return confirm('Eliminar transaccion?');">
-                            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
-                            <button type="submit" class="danger">Eliminar</button>
-                        </form>
-                    </td>
-                </tr>
-                </tbody>
-            </table>
-            <p th:if="${#lists.isEmpty(transacciones)}">No has registrado transacciones aun.</p>
-        </section>
-    </main>
+    </div>
 </div>
+
+<script th:inline="javascript">
+    var editMode       = false;
+    var formConErrores = /*[[${formConErrores ?: false}]]*/ false;
+    var tipoError      = /*[[${transaccion.tipo != null ? transaccion.tipo.name() : ''}]]*/ '';
+
+    /* ────────────────────────────────────────────
+       MODAL
+       ──────────────────────────────────────────── */
+    function abrirModalNuevo() {
+        resetPaso2();
+        document.getElementById('paso1').style.display = 'block';
+        document.getElementById('paso2').style.display = 'none';
+        document.getElementById('modalOverlay').classList.add('active');
+    }
+
+    function seleccionarTipo(tipo) {
+        document.getElementById('tipo').value = tipo;
+        document.getElementById('paso2Titulo').textContent =
+            tipo === 'INGRESO' ? 'Registrar ingreso' : 'Registrar gasto';
+
+        var paso2 = document.getElementById('paso2');
+        paso2.classList.toggle('modo-gasto', tipo === 'GASTO');
+
+        document.getElementById('lblTipoIngreso').style.display    = tipo === 'INGRESO' ? 'flex' : 'none';
+        document.getElementById('lblPresupuesto').style.display    = tipo === 'GASTO'   ? 'flex' : 'none';
+        document.getElementById('lblCategoriaLibre').style.display = 'none';
+
+        document.getElementById('campoCategoria').value = '';
+
+        document.getElementById('paso1').style.display = 'none';
+        document.getElementById('paso2').style.display = 'block';
+    }
+
+    function volverPaso1() {
+        document.getElementById('paso1').style.display = 'block';
+        document.getElementById('paso2').style.display = 'none';
+        resetPaso2();
+    }
+
+    function resetPaso2() {
+        document.getElementById('campoCategoria').value = '';
+        var si = document.getElementById('selectTipoIngreso');
+        if (si) si.value = '';
+        var sp = document.getElementById('selectPresupuesto');
+        if (sp) { sp.value = ''; sp.disabled = false; }
+        var cl = document.getElementById('inputCategoriaLibre');
+        if (cl) cl.value = '';
+        // Reset advanced
+        document.getElementById('advancedFields').style.display = 'none';
+        document.getElementById('advancedCaret').textContent = '▸';
+        var fecha = document.getElementById('campoFecha');
+        if (fecha) { fecha.value = ''; fecha.disabled = true; }
+        var desc = document.getElementById('campoDescripcion');
+        if (desc) desc.value = '';
+    }
+
+    function onFechaInput(input) {
+        // Si el usuario ingresa fecha, habilitar para que se envie
+        input.disabled = !input.value;
+    }
+
+    function cerrarModal() {
+        document.getElementById('modalOverlay').classList.remove('active');
+    }
+
+    document.getElementById('modalOverlay').addEventListener('click', function(e) {
+        if (e.target === this) cerrarModal();
+    });
+
+    function toggleAdvanced() {
+        var box = document.getElementById('advancedFields');
+        var caret = document.getElementById('advancedCaret');
+        var visible = box.style.display === 'block';
+        box.style.display = visible ? 'none' : 'block';
+        caret.textContent = visible ? '▸' : '▾';
+    }
+
+    /* ────────────────────────────────────────────
+       CATEGORIA — sincronizacion
+       ──────────────────────────────────────────── */
+    function onIngresoChange(val) {
+        document.getElementById('campoCategoria').value = val;
+    }
+
+    function onPresupuestoChange(select) {
+        var val = select.value;
+        var lblLibre = document.getElementById('lblCategoriaLibre');
+        if (!val) {
+            lblLibre.style.display = 'flex';
+            var libre = document.getElementById('inputCategoriaLibre').value.trim();
+            document.getElementById('campoCategoria').value = libre || 'Gasto general';
+        } else {
+            lblLibre.style.display = 'none';
+            document.getElementById('campoCategoria').value =
+                select.options[select.selectedIndex].text;
+        }
+    }
+
+    function onCategoriaLibreInput(val) {
+        document.getElementById('campoCategoria').value = val.trim() || 'Gasto general';
+    }
+
+    document.getElementById('frmTransaccion').addEventListener('submit', function() {
+        var cat = document.getElementById('campoCategoria').value;
+        if (!cat || cat.trim() === '') {
+            document.getElementById('campoCategoria').value = 'Gasto general';
+        }
+        var sp = document.getElementById('selectPresupuesto');
+        if (sp && !sp.value) {
+            sp.disabled = true;
+        }
+        // Fecha: si no tiene valor, mantenerla disabled (el server asignara now())
+        var fecha = document.getElementById('campoFecha');
+        if (fecha && !fecha.value) {
+            fecha.disabled = true;
+        }
+    });
+
+    /* ────────────────────────────────────────────
+       MODO EDICION
+       ──────────────────────────────────────────── */
+    function toggleEditMode() {
+        editMode = !editMode;
+        document.getElementById('btnEditar').classList.toggle('active', editMode);
+        document.querySelectorAll('.txn-delete-action').forEach(function(el) {
+            el.classList.toggle('visible', editMode);
+        });
+    }
+
+    /* ────────────────────────────────────────────
+       DROPDOWNS DE FILTRO
+       ──────────────────────────────────────────── */
+    var filtroPeriodo = 'mes';
+    var filtroTipo    = 'todo';
+
+    function togglePillDropdown(cual) {
+        var menuPeriodo = document.getElementById('menuPeriodo');
+        var menuFiltro  = document.getElementById('menuFiltro');
+        if (cual === 'periodo') {
+            menuFiltro.classList.remove('open');
+            menuPeriodo.classList.toggle('open');
+        } else {
+            menuPeriodo.classList.remove('open');
+            menuFiltro.classList.toggle('open');
+        }
+    }
+
+    // Cerrar dropdowns al click fuera
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('#pillPeriodo')) {
+            document.getElementById('menuPeriodo').classList.remove('open');
+        }
+        if (!e.target.closest('#pillFiltro')) {
+            document.getElementById('menuFiltro').classList.remove('open');
+        }
+    });
+
+    function setPeriodo(periodo) {
+        filtroPeriodo = periodo;
+        var label = {
+            'hoy':    'Hoy',
+            'semana': 'Esta semana',
+            'mes':    'Este mes',
+            'todo':   'Todo'
+        }[periodo];
+        document.getElementById('lblPeriodo').textContent = label;
+        document.querySelectorAll('#menuPeriodo .pill-option').forEach(function(opt) {
+            opt.classList.toggle('active', opt.getAttribute('data-periodo') === periodo);
+        });
+        document.getElementById('menuPeriodo').classList.remove('open');
+        aplicarFiltros();
+    }
+
+    function setFiltroFromBtn(btn) {
+        setFiltro(btn.getAttribute('data-filtro'), btn.getAttribute('data-label'));
+    }
+
+    function setFiltro(filtro, label) {
+        filtroTipo = filtro;
+        document.getElementById('lblFiltro').textContent = label;
+        document.querySelectorAll('#menuFiltro .pill-option').forEach(function(opt) {
+            opt.classList.toggle('active', opt.getAttribute('data-filtro') === filtro);
+        });
+        document.getElementById('menuFiltro').classList.remove('open');
+        aplicarFiltros();
+    }
+
+    /* ────────────────────────────────────────────
+       APLICAR FILTROS combinados + actualizar pills
+       ──────────────────────────────────────────── */
+    function enRangoPeriodo(fechaStr, periodo) {
+        if (periodo === 'todo') return true;
+        var hoy = new Date();
+        var f   = new Date(fechaStr + 'T00:00:00');
+        if (periodo === 'hoy') {
+            return f.getFullYear() === hoy.getFullYear()
+                && f.getMonth()    === hoy.getMonth()
+                && f.getDate()     === hoy.getDate();
+        }
+        if (periodo === 'semana') {
+            var diaSem = hoy.getDay() === 0 ? 6 : hoy.getDay() - 1; // lunes=0
+            var inicio = new Date(hoy);
+            inicio.setDate(hoy.getDate() - diaSem);
+            inicio.setHours(0,0,0,0);
+            var fin = new Date(inicio);
+            fin.setDate(inicio.getDate() + 6);
+            fin.setHours(23,59,59,999);
+            return f >= inicio && f <= fin;
+        }
+        if (periodo === 'mes') {
+            return f.getFullYear() === hoy.getFullYear()
+                && f.getMonth()    === hoy.getMonth();
+        }
+        return true;
+    }
+
+    function pasaFiltroTipo(row, filtro) {
+        if (filtro === 'todo')     return true;
+        if (filtro === 'ingresos') return row.getAttribute('data-tipo') === 'INGRESO';
+        if (filtro === 'gastos')   return row.getAttribute('data-tipo') === 'GASTO';
+        if (filtro.indexOf('p:') === 0) {
+            return row.getAttribute('data-pid') === filtro.substring(2);
+        }
+        return true;
+    }
+
+    function aplicarFiltros() {
+        var totalIngresos = 0;
+        var totalGastos   = 0;
+        var totalCount    = 0;
+
+        document.querySelectorAll('.date-group').forEach(function(grupo) {
+            var fechaGrupo = grupo.getAttribute('data-fecha');
+            var grupoVisible = enRangoPeriodo(fechaGrupo, filtroPeriodo);
+            var algunaFila = false;
+
+            grupo.querySelectorAll('.txn-row').forEach(function(row) {
+                var visible = grupoVisible && pasaFiltroTipo(row, filtroTipo);
+                row.style.display = visible ? '' : 'none';
+                if (visible) {
+                    algunaFila = true;
+                    var monto = parseFloat(row.getAttribute('data-monto') || '0');
+                    if (row.getAttribute('data-tipo') === 'INGRESO') totalIngresos += monto;
+                    else totalGastos += monto;
+                    totalCount++;
+                }
+            });
+
+            grupo.style.display = algunaFila ? '' : 'none';
+        });
+
+        // Actualizar pills
+        document.getElementById('miniIngresos').textContent = '+' + formatNumber(totalIngresos);
+        document.getElementById('miniGastos').textContent   = '-' + formatNumber(totalGastos);
+        document.getElementById('miniCount').textContent    = totalCount + (totalCount === 1 ? ' movimiento' : ' movimientos');
+
+        // Empty state filtrado
+        var empty = document.getElementById('emptyFiltered');
+        var hasRows = document.querySelectorAll('.txn-row').length > 0;
+        if (empty) {
+            empty.style.display = (hasRows && totalCount === 0) ? 'block' : 'none';
+        }
+    }
+
+    function formatNumber(n) {
+        return n.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    // Aplicar filtros iniciales
+    aplicarFiltros();
+
+    // Reabrir modal si hubo errores de validacion
+    if (formConErrores) {
+        abrirModalNuevo();
+        if (tipoError) {
+            seleccionarTipo(tipoError);
+        }
+    }
+</script>
+
 </body>
 </html>

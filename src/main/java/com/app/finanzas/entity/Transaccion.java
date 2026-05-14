@@ -1,9 +1,9 @@
 package com.app.finanzas.entity;
 
+import com.app.finanzas.converter.TipoTransaccionConverter;
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -18,6 +18,7 @@ import jakarta.validation.constraints.Size;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "transaccion")
@@ -32,7 +33,7 @@ public class Transaccion {
     private Cuenta cuenta;
 
     @NotNull
-    @Enumerated(EnumType.STRING)
+    @Convert(converter = TipoTransaccionConverter.class)
     @Column(nullable = false, length = 10)
     private TipoTransaccion tipo;
 
@@ -41,9 +42,11 @@ public class Transaccion {
     @Column(nullable = false, length = 50)
     private String categoria;
 
-    @NotNull
     @Column(nullable = false)
     private LocalDate fecha;
+
+    @Column(name = "fecha_registro")
+    private LocalDateTime fechaRegistro;
 
     @NotNull
     @DecimalMin("0.01")
@@ -56,6 +59,10 @@ public class Transaccion {
 
     @Column(nullable = false)
     private boolean fijo = false;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "presupuesto_id")
+    private Presupuesto presupuesto;
 
     public Integer getId() {
         return id;
@@ -119,5 +126,21 @@ public class Transaccion {
 
     public void setFijo(boolean fijo) {
         this.fijo = fijo;
+    }
+
+    public LocalDateTime getFechaRegistro() {
+        return fechaRegistro;
+    }
+
+    public void setFechaRegistro(LocalDateTime fechaRegistro) {
+        this.fechaRegistro = fechaRegistro;
+    }
+
+    public Presupuesto getPresupuesto() {
+        return presupuesto;
+    }
+
+    public void setPresupuesto(Presupuesto presupuesto) {
+        this.presupuesto = presupuesto;
     }
 }

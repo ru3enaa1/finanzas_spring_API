@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Presupuestos - Pfm</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" th:href="@{/css/layout.css}">
+    <link rel="stylesheet" th:href="@{/css/transacciones.css}">
+    <link rel="stylesheet" th:href="@{/css/presupuestos.css}">
+</head>
+<body>
+<div class="app-layout">
+
+    <aside th:replace="~{fragments/sidebar :: sidebar}"></aside>
+
+    <div class="main-wrapper">
+        <header th:replace="~{fragments/topbar :: topbar}"></header>
+
+        <div class="content-scroll">
+
+            <div class="alert success" th:if="${mensajeExito != null}" th:text="${mensajeExito}"></div>
+            <div class="alert error"   th:if="${mensajeError != null}" th:text="${mensajeError}"></div>
+
+            <!-- Header: + / lapiz / saldo + divisa (igual que transacciones) -->
+            <div class="txn-header">
+                <div class="header-actions">
+                    <button class="btn-icon" id="btnNuevo"
+                            onclick="abrirModalNuevo()" title="Nuevo presupuesto">+</button>
+                    <button class="btn-icon" id="btnEditar"
+                            th:disabled="${#lists.isEmpty(presupuestos)}"
+                            onclick="toggleEditMode()" title="Eliminar presupuestos">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24"
+                             fill="none" stroke="currentColor" stroke-width="2.2"
+                             stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="header-balance">
+                    <div class="balance-info">
+                        <span class="balance-account-name" th:text="${cuentaActivaNombre}"></span>
+                        <div class="balance-amount">
+                            <span class="balance-symbol" th:text="${simboloMoneda}">$</span>
+                            <span class="balance-number"
+                                  th:text="${#numbers.formatDecimal(saldoTotal != null ? saldoTotal : 0, 1, 'COMMA', 2, 'POINT')}">0,00</span>
+                        </div>
+                    </div>
+                    <span class="balance-moneda" th:text="${monedaActual}">COP</span>
+                </div>
+            </div>
+
+            <!-- Dropdowns: periodo (estatico mensual) + filtro presupuesto -->
+            <div class="txn-summary">
+
+                <div class="summary-pill pill-period">
+                    <button type="button" class="pill-trigger" style="cursor:default">
+                        <div class="pill-content">
+                            <span class="pill-label">Periodo</span>
+                            <span class="pill-summary">
+                                <span class="pill-mini pill-mini-count">Mensual</span>
+                            </span>
+                        </div>
+                    </button>
+                </div>
+
+                <div class="summary-pill pill-filter" id="pillFiltroPres">
+                    <button type="button" class="pill-trigger" onclick="togglePresDropdown()">
+                        <div class="pill-content">
+                            <span class="pill-label" id="lblFiltroPres">Todos</span>
+                            <span class="pill-summary">
+                                <span class="pill-mini pill-mini-count" id="miniCountPres">
+                                    <span th:text="${#lists.size(presupuestos)}">0</span> presupuestos
+                                </span>
+                            </span>
+                        </div>
+                        <svg class="pill-caret" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+                             fill="none" stroke="currentColor" stroke-width="2.5"
+                             stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="6 9 12 15 18 9"/>
+                        </svg>
+                    </button>
+                    <div class="pill-menu" id="menuFiltroPres">
+                        <button type="button" class="pill-option active"
+                                data-filtro="todos" data-label="Todos"
+                                onclick="setFiltroPresFromBtn(this)">Todos</button>
+                        <div class="pill-divider" th:if="${!#lists.isEmpty(presupuestos)}"></div>
+                        <button type="button" class="pill-option"
+                                th:each="p : ${presupuestos}"
+                                th:attr="data-filtro=${'p:' + p.id},data-label=${p.nombre}"
+                                onclick="setFiltroPresFromBtn(this)"
+                                th:text="${p.nombre}"></button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Lista de presupuestos (barras horizontales) -->
+            <div class="pres-section-header">
+                <h2 class="pres-section-title">Presupuestos</h2>
+                <span class="pres-section-hint">Compartidos en todas tus cuentas</span>
+            </div>
+
+            <div class="pres-list" th:if="${!#lists.isEmpty(vistas)}">
+                <div th:each="pv : ${vistas}"
+                     class="pres-row pres-clickable"
+                     th:attr="data-pid=${pv.presupuesto.id},
+                              data-nombre=${pv.presupuesto.nombre},
+                              data-color=${pv.presupuesto.color},
+                              data-tipo=${pv.presupuesto.tipo.name()},
+                              data-monto=${pv.presupuesto.montoEstimado}"
+                     onclick="onPresupuestoClick(this, event)">
+
+                    <span class="pres-dot" th:attr="data-color=${pv.presupuesto.color}"></span>
+
+                    <div class="pres-name">
+                        <span class="pres-name-main" th:text="${pv.presupuesto.nombre}"></span>
+                        <span class="pres-name-sub">
+                            <span th:if="${pv.presupuesto.tipo.name() == 'FIJO'}" class="pres-fijo-badge">
+                                <span th:if="${pv.presupuesto.diaVencimiento != null}"
+                                      th:text="${'Dia ' + pv.presupuesto.diaVencimiento}">Dia 1</span>
+                                <span th:if="${pv.presupuesto.diaVencimiento == null}">Pago fijo</span>
+                            </span>
+                            <span th:if="${pv.presupuesto.tipo.name() == 'LIMITE'}"
+                                  th:text="${pv.presupuesto.categoria ?: 'Limite'}"></span>
+                        </span>
+                    </div>
+
+                    <div class="pres-bar-wrap">
+                        <div class="pres-bar-track">
+                            <div class="pres-bar-fill"
+                                 th:classappend="${pv.estado}"
+                                 th:style="'width:' + ${pv.pctBar} + '%'"></div>
+                        </div>
+                        <div class="pres-bar-meta">
+                            <span class="pres-bar-pct"
+                                  th:classappend="${pv.over} ? 'over' : ''"
+                                  th:text="${#numbers.formatDecimal(pv.pct, 1, 0)} + '%'">0%</span>
+                            <span>
+                                <span th:text="${simboloMoneda}">$</span>
+                                <span th:text="${#numbers.formatDecimal(pv.gastadoConv, 1, 'COMMA', 2, 'POINT')}">0</span>
+                                <span style="opacity:0.5"> / </span>
+                                <span th:text="${simboloMoneda}">$</span>
+                                <span th:text="${#numbers.formatDecimal(pv.limiteConv, 1, 'COMMA', 2, 'POINT')}">0</span>
+                            </span>
+                        </div>
+                        <!-- Contexto de la cuenta activa: solo si hay aporte > 0 -->
+                        <div class="pres-bar-context" th:if="${pv.hayGastoEnCuentaActiva}">
+                            <span>Desde
+                                <strong th:text="${cuentaActivaNombre}">cuenta</strong>:
+                                <span th:text="${simboloMoneda}">$</span><span
+                                    th:text="${#numbers.formatDecimal(pv.gastadoCuentaActivaConv, 1, 'COMMA', 2, 'POINT')}">0</span>
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="pres-amount">
+                        <span th:text="${simboloMoneda}">$</span>
+                        <span th:text="${#numbers.formatDecimal(pv.limiteConv, 1, 'COMMA', 2, 'POINT')}">0</span>
+                        <div class="pres-amount-small" th:text="${monedaActual}">COP</div>
+                    </div>
+
+                    <div class="pres-delete-action">
+                        <form th:action="@{'/presupuestos/' + ${pv.presupuesto.id} + '/eliminar'}" method="post"
+                              onsubmit="return confirm('¿Eliminar este presupuesto?');">
+                            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                            <button type="submit" class="btn-pres-delete">×</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <div class="empty-pres" th:if="${#lists.isEmpty(vistas)}">
+                Aun no has creado presupuestos. Usa el botón <strong>+</strong> para empezar.
+            </div>
+
+            <!-- Stats: total presupuestado | total gastado -->
+            <div class="pres-stats" th:if="${!#lists.isEmpty(vistas)}">
+                <div class="pres-stat">
+                    <span class="pres-stat-label">Total presupuestos</span>
+                    <span class="pres-stat-amount">
+                        <span th:text="${simboloMoneda}">$</span>
+                        <span th:text="${#numbers.formatDecimal(totalLimiteConv, 1, 'COMMA', 2, 'POINT')}">0</span>
+                    </span>
+                </div>
+                <div class="pres-stat-divider"></div>
+                <div class="pres-stat">
+                    <span class="pres-stat-label">Total gastado</span>
+                    <span class="pres-stat-amount"
+                          th:classappend="${totalExcedido} ? 'exceeded' : ''">
+                        <span th:text="${simboloMoneda}">$</span>
+                        <span th:text="${#numbers.formatDecimal(totalGastadoConv, 1, 'COMMA', 2, 'POINT')}">0</span>
+                    </span>
+                </div>
+            </div>
+
+            <!-- Historial de transacciones de presupuestos -->
+            <h2 class="pres-section-title">Historial de movimientos</h2>
+
+            <div class="txn-timeline" id="timelinePres">
+                <div th:each="entry : ${agrupadas}"
+                     class="date-group"
+                     th:attr="data-fecha=${#temporals.format(entry.key, 'yyyy-MM-dd')}">
+                    <div class="date-label">
+                        <span th:text="${#temporals.format(entry.key, 'dd/MM/yyyy')}"></span>
+                    </div>
+                    <div th:each="t : ${entry.value}"
+                         class="txn-row txn-gasto"
+                         th:attr="data-pid=${t.presupuesto != null ? t.presupuesto.id : ''}">
+                        <div class="txn-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                                 fill="none" stroke="currentColor" stroke-width="2.5"
+                                 stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="17" y1="7" x2="7" y2="17"/>
+                                <polyline points="17 17 7 17 7 7"/>
+                            </svg>
+                        </div>
+                        <div class="txn-info">
+                            <span class="txn-cat" th:text="${t.categoria}"></span>
+                            <small class="txn-time"
+                                   th:text="${t.fechaRegistro != null ? #temporals.format(t.fechaRegistro, 'HH:mm') : ''}"></small>
+                        </div>
+                        <div class="txn-ref-wrap">
+                            <span class="txn-budget-icon" th:if="${t.presupuesto != null}"
+                                  th:attr="data-color=${t.presupuesto.color}">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24"
+                                     fill="none" stroke="currentColor" stroke-width="2.5"
+                                     stroke-linecap="round" stroke-linejoin="round">
+                                    <rect x="2" y="7" width="20" height="14" rx="2"/>
+                                    <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/>
+                                </svg>
+                            </span>
+                            <span class="txn-ref"
+                                  th:text="${'De ' + (t.presupuesto != null ? t.presupuesto.nombre : t.categoria)}"></span>
+                        </div>
+                        <span class="txn-amount amount-gasto"
+                              th:text="'-' + ${simboloMoneda} + ' ' + ${#numbers.formatDecimal(t.monto.multiply(tasaActual), 1, 'COMMA', 2, 'POINT')}">
+                        </span>
+                        <div></div>
+                    </div>
+                </div>
+                <div class="empty-msg" th:if="${agrupadas.isEmpty()}">
+                    Sin movimientos vinculados a presupuestos este mes.
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- ====================================================
+     MODAL: Crear presupuesto
+     ==================================================== -->
+<div class="modal-overlay" id="modalOverlay">
+    <div class="modal-box" onclick="event.stopPropagation()">
+        <h3 class="modal-title">Nuevo presupuesto</h3>
+
+        <form id="frmPresupuesto" th:action="@{/presupuestos}" th:object="${formulario}" method="post"
+              autocomplete="off">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+            <input type="hidden" th:field="*{tipo}" id="campoTipo">
+            <input type="hidden" th:field="*{color}" id="campoColor">
+            <!-- Nombre del presupuesto: hidden ligado a *{nombre} (th:field necesita name='nombre'),
+                 visible es input independiente con name unico para que el browser NO autocomplete -->
+            <input type="hidden" th:field="*{nombre}" id="campoNombreHidden">
+
+            <!-- Tipo -->
+            <div class="tipo-selector">
+                <button type="button" class="tipo-card active" id="cardLimite"
+                        onclick="seleccionarTipo('LIMITE')">
+                    <span class="tipo-card-title">Límite mensual</span>
+                    <span class="tipo-card-desc">Para gastos variables: Mercado, Transporte</span>
+                </button>
+                <button type="button" class="tipo-card" id="cardFijo"
+                        onclick="seleccionarTipo('FIJO')">
+                    <span class="tipo-card-title">Pago fijo</span>
+                    <span class="tipo-card-desc">Para pagos recurrentes: Arriendo, Netflix</span>
+                </button>
+            </div>
+
+            <div class="modal-fields">
+                <!-- Categoria: input visible con name unico (evita autocomplete del browser),
+                     sincronizado por JS al hidden #campoNombreHidden -->
+                <label>
+                    Categoría
+                    <input type="text" id="campoNombre"
+                           list="catList" placeholder="Elegir o escribir" maxlength="50" required
+                           autocomplete="off" name="pres_cat_input"
+                           oninput="document.getElementById('campoNombreHidden').value = this.value">
+                    <datalist id="catList">
+                        <option th:each="c : ${categoriasSugeridas}" th:value="${c}"></option>
+                    </datalist>
+                    <span class="field-error"
+                          th:if="${#fields.hasErrors('nombre')}"
+                          th:errors="*{nombre}"></span>
+                </label>
+
+                <!-- Monto en COP -->
+                <label>
+                    Monto mensual <small style="color:rgba(255,255,255,0.4);font-weight:400">(en COP)</small>
+                    <div class="input-prefix">
+                        <span>COP&nbsp;$</span>
+                        <input type="number" th:field="*{montoEstimado}"
+                               step="1" min="0" placeholder="0" required>
+                    </div>
+                    <span class="field-error"
+                          th:if="${#fields.hasErrors('montoEstimado')}"
+                          th:errors="*{montoEstimado}"></span>
+                </label>
+
+                <!-- Dia vencimiento (solo si FIJO) -->
+                <label id="lblDiaVenc" style="display:none">
+                    Día del mes para pago
+                    <input type="number" th:field="*{diaVencimiento}"
+                           min="1" max="31" placeholder="Ej: 5">
+                </label>
+
+                <!-- Color picker -->
+                <label>
+                    Color identificador
+                    <div class="color-picker" id="colorPicker">
+                        <button type="button" class="color-swatch active" data-color="#C4985A" style="background:#C4985A"></button>
+                        <button type="button" class="color-swatch" data-color="#E67E22" style="background:#E67E22"></button>
+                        <button type="button" class="color-swatch" data-color="#5B8DEF" style="background:#5B8DEF"></button>
+                        <button type="button" class="color-swatch" data-color="#27AE60" style="background:#27AE60"></button>
+                        <button type="button" class="color-swatch" data-color="#9B59B6" style="background:#9B59B6"></button>
+                        <button type="button" class="color-swatch" data-color="#E91E63" style="background:#E91E63"></button>
+                        <button type="button" class="color-swatch" data-color="#16A085" style="background:#16A085"></button>
+                        <button type="button" class="color-swatch" data-color="#34495E" style="background:#34495E"></button>
+                    </div>
+                </label>
+            </div>
+
+            <div class="modal-actions">
+                <button type="button" class="btn-modal-cancel" onclick="cerrarModal()">Cancelar</button>
+                <button type="submit" class="btn-modal-save">Guardar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ====================================================
+     MODAL: Agregar gasto rapido (al clickear un presupuesto)
+     ==================================================== -->
+<div class="modal-overlay" id="modalGastoOverlay">
+    <div class="modal-box" onclick="event.stopPropagation()">
+
+        <h3 class="modal-title" id="gastoModalTitulo">
+            Agregar gasto a
+            <span class="pres-target">
+                <span class="pres-target-dot" id="gastoDot"></span>
+                <span id="gastoNombre"></span>
+            </span>
+        </h3>
+
+        <form id="frmGastoRapido" th:action="@{/transacciones}" method="post" autocomplete="off">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+            <input type="hidden" name="tipo" value="GASTO">
+            <input type="hidden" name="presupuestoId" id="gastoPresupuestoId">
+            <input type="hidden" name="categoria" id="gastoCategoria">
+            <input type="hidden" name="redirect" value="/presupuestos">
+
+            <div class="modal-fields">
+                <!-- Monto (siempre en COP) -->
+                <label>
+                    Monto <small style="color:rgba(255,255,255,0.4);font-weight:400">(en COP)</small>
+                    <div class="input-prefix">
+                        <span>COP&nbsp;$</span>
+                        <input type="number" name="monto" id="gastoMonto"
+                               step="0.01" min="0.01" placeholder="0.00" required>
+                    </div>
+                </label>
+
+                <!-- Mas opciones -->
+                <div class="advanced-toggle">
+                    <button type="button" class="advanced-link" onclick="toggleGastoAdvanced()">
+                        <span id="gastoCaret">▸</span> Más opciones
+                    </button>
+                </div>
+
+                <div id="gastoAdvanced" class="advanced-fields" style="display:none">
+                    <label>
+                        Fecha
+                        <input type="date" name="fecha" id="gastoFecha" disabled
+                               oninput="this.disabled = !this.value">
+                    </label>
+                    <label>
+                        Descripción
+                        <input type="text" name="descripcion"
+                               placeholder="Opcional" maxlength="100">
+                    </label>
+                </div>
+            </div>
+
+            <div class="account-confirm">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+                     fill="none" stroke="currentColor" stroke-width="2"
+                     stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="2" y="5" width="20" height="14" rx="2"/>
+                    <line x1="2" y1="10" x2="22" y2="10"/>
+                </svg>
+                <span>Se registrará en
+                    <strong th:text="${cuentaActivaNombre != null ? cuentaActivaNombre : 'Sin cuenta activa'}"></strong>
+                </span>
+            </div>
+
+            <div class="modal-actions">
+                <button type="button" class="btn-modal-cancel" onclick="cerrarModalGasto()">Cancelar</button>
+                <button type="submit" class="btn-modal-save">Guardar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script th:inline="javascript">
+    var editMode = false;
+    var formConErrores = /*[[${formConErrores ?: false}]]*/ false;
+
+    function abrirModalNuevo() {
+        // Sincronizar input visible con valor del hidden (puede venir de error de validacion)
+        var hidden = document.getElementById('campoNombreHidden');
+        var visible = document.getElementById('campoNombre');
+        if (hidden && visible) visible.value = hidden.value || '';
+        document.getElementById('modalOverlay').classList.add('active');
+    }
+
+    function cerrarModal() {
+        document.getElementById('modalOverlay').classList.remove('active');
+    }
+
+    /* ─────────────────────────────────────────────
+       MODAL: Agregar gasto rapido a un presupuesto
+       ───────────────────────────────────────────── */
+    function onPresupuestoClick(row, event) {
+        // En modo edicion el click no abre modal (el boton X borra)
+        if (editMode) return;
+        // Si el click vino del boton X o su form, no abrir modal
+        if (event && event.target && event.target.closest('.pres-delete-action')) return;
+
+        var pid    = row.getAttribute('data-pid');
+        var nombre = row.getAttribute('data-nombre');
+        var color  = row.getAttribute('data-color');
+        var tipo   = row.getAttribute('data-tipo');
+        var monto  = row.getAttribute('data-monto');
+
+        document.getElementById('gastoPresupuestoId').value = pid;
+        document.getElementById('gastoCategoria').value = nombre;
+        document.getElementById('gastoNombre').textContent = nombre;
+        document.getElementById('gastoDot').style.background = color;
+
+        // Pre-llenar monto si tipo FIJO; vaciar si LIMITE
+        var inputMonto = document.getElementById('gastoMonto');
+        if (tipo === 'FIJO' && monto) {
+            inputMonto.value = parseFloat(monto);
+            // Auto-seleccionar el texto para que el usuario pueda editar facil
+            setTimeout(function() { inputMonto.select(); }, 50);
+        } else {
+            inputMonto.value = '';
+            setTimeout(function() { inputMonto.focus(); }, 50);
+        }
+
+        // Reset advanced
+        document.getElementById('gastoAdvanced').style.display = 'none';
+        document.getElementById('gastoCaret').textContent = '▸';
+        var fecha = document.getElementById('gastoFecha');
+        fecha.value = ''; fecha.disabled = true;
+
+        document.getElementById('modalGastoOverlay').classList.add('active');
+    }
+
+    function cerrarModalGasto() {
+        document.getElementById('modalGastoOverlay').classList.remove('active');
+    }
+
+    function toggleGastoAdvanced() {
+        var box = document.getElementById('gastoAdvanced');
+        var caret = document.getElementById('gastoCaret');
+        var visible = box.style.display === 'block';
+        box.style.display = visible ? 'none' : 'block';
+        caret.textContent = visible ? '▸' : '▾';
+    }
+
+    document.getElementById('modalGastoOverlay').addEventListener('click', function(e) {
+        if (e.target === this) cerrarModalGasto();
+    });
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            cerrarModal();
+            cerrarModalGasto();
+        }
+    });
+
+    document.getElementById('modalOverlay').addEventListener('click', function(e) {
+        if (e.target === this) cerrarModal();
+    });
+
+    function seleccionarTipo(tipo) {
+        document.getElementById('campoTipo').value = tipo;
+        document.getElementById('cardLimite').classList.toggle('active', tipo === 'LIMITE');
+        document.getElementById('cardFijo').classList.toggle('active', tipo === 'FIJO');
+        document.getElementById('lblDiaVenc').style.display = tipo === 'FIJO' ? 'flex' : 'none';
+    }
+
+    // Color picker
+    document.getElementById('colorPicker').addEventListener('click', function(e) {
+        var btn = e.target.closest('.color-swatch');
+        if (!btn) return;
+        document.querySelectorAll('#colorPicker .color-swatch').forEach(function(s) {
+            s.classList.remove('active');
+        });
+        btn.classList.add('active');
+        document.getElementById('campoColor').value = btn.getAttribute('data-color');
+    });
+
+    // Modo edicion
+    function toggleEditMode() {
+        editMode = !editMode;
+        document.body.classList.toggle('edit-mode', editMode);
+        document.getElementById('btnEditar').classList.toggle('active', editMode);
+        document.querySelectorAll('.pres-delete-action').forEach(function(el) {
+            el.classList.toggle('visible', editMode);
+        });
+    }
+
+    // Dropdown filtro presupuesto
+    function togglePresDropdown() {
+        document.getElementById('menuFiltroPres').classList.toggle('open');
+    }
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('#pillFiltroPres')) {
+            document.getElementById('menuFiltroPres').classList.remove('open');
+        }
+    });
+
+    function setFiltroPresFromBtn(btn) {
+        setFiltroPres(btn.getAttribute('data-filtro'), btn.getAttribute('data-label'));
+    }
+
+    function setFiltroPres(filtro, label) {
+        document.getElementById('lblFiltroPres').textContent = label;
+        document.querySelectorAll('#menuFiltroPres .pill-option').forEach(function(opt) {
+            opt.classList.toggle('active', opt.getAttribute('data-filtro') === filtro);
+        });
+        document.getElementById('menuFiltroPres').classList.remove('open');
+
+        // Filtrar lista de presupuestos
+        var idTarget = filtro.indexOf('p:') === 0 ? filtro.substring(2) : null;
+        document.querySelectorAll('.pres-row').forEach(function(row) {
+            row.style.display = (!idTarget || row.getAttribute('data-pid') === idTarget) ? '' : 'none';
+        });
+
+        // Filtrar timeline historial
+        document.querySelectorAll('#timelinePres .date-group').forEach(function(grupo) {
+            var algunaFila = false;
+            grupo.querySelectorAll('.txn-row').forEach(function(r) {
+                var pid = r.getAttribute('data-pid');
+                var visible = !idTarget || pid === idTarget;
+                r.style.display = visible ? '' : 'none';
+                if (visible) algunaFila = true;
+            });
+            grupo.style.display = algunaFila ? '' : 'none';
+        });
+    }
+
+    if (formConErrores) abrirModalNuevo();
+</script>
+
+</body>
+</html>

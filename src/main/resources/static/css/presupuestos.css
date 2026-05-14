@@ -1,167 +1,358 @@
-/* Reset */
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-  font-family: 'Roboto', sans-serif;
-}
+/* ============================================================
+   Presupuestos — estilos especificos de la vista
+   Reusa header / pills / modal de transacciones.css cuando ambos
+   archivos se cargan en el template.
+   ============================================================ */
 
-body {
-  background-color: #2E2841;
-  color: #FFFFFF;
-  height: 100vh;
+/* ----------------------------------------------------------
+   Stats: total presupuestado | total gastado
+   ---------------------------------------------------------- */
+.pres-stats {
   display: flex;
-}
-
-/* Dashboard container */
-.dashboard {
-  display: flex;
-  width: 100%;
-  height: 100vh;
-}
-
-/* Sidebar */
-.sidebar {
-  background-color: #463759;
-  width: 220px;
-  padding: 20px 10px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-.sidebar .logo img {
-  width: 120px;
-  margin-bottom: 30px;
-}
-
-.sidebar .menu {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-}
-
-.sidebar .menu a {
-  display: flex;
-  align-items: center;
-  padding: 12px;
-  margin-bottom: 15px;
-  color: #B3A7D1;
-  text-decoration: none;
-  border-radius: 10px;
-  transition: background 0.3s;
-}
-
-.sidebar .menu a .icon {
-  margin-right: 10px;
-  font-size: 18px;
-}
-
-.sidebar .menu a:hover,
-.sidebar .menu a.active {
-  background-color: #2E2841;
-  color: #FFFFFF;
-}
-
-/* Main content */
-.main-content {
-  flex: 1;
-  padding: 20px 40px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-/* Top bar */
-.topbar {
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  width: 100%;
-  margin-bottom: 50px;
-}
-
-.progress {
-  display: flex;
-  align-items: center;
-  background: #A57446;
-  padding: 5px 15px;
-  border-radius: 20px;
-  margin-right: 15px;
-}
-
-.progress .piggy {
-  margin-right: 8px;
-}
-
-.progress-text {
-  font-weight: bold;
-}
-
-.user {
-  background: #fff;
-  color: #2E2841;
-  padding: 5px 15px;
-  border-radius: 20px;
-  font-weight: bold;
-}
-
-/* Form Box */
-.form-box {
+  align-items: stretch;
+  gap: 0;
+  margin: 12px 0 18px;
   background: #060411;
-  padding: 30px;
-  border-radius: 20px;
-  width: 350px;
+  border-radius: 14px;
+  padding: 14px 4px;
 }
 
-.form-box h2 {
-  margin-bottom: 20px;
-  font-size: 18px;
-  font-weight: bold;
-  text-align: center;
-}
-
-.form-box form {
+.pres-stat {
+  flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  gap: 4px;
+  padding: 0 20px;
 }
 
-.form-box label {
+.pres-stat-divider {
+  width: 1px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.pres-stat-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: rgba(255, 255, 255, 0.4);
+  font-weight: 600;
+}
+
+.pres-stat-amount {
+  font-size: 22px;
+  font-weight: 700;
+  color: #F0ECF8;
+  letter-spacing: -0.5px;
+}
+
+.pres-stat-amount.exceeded { color: #E74C3C; }
+
+/* ----------------------------------------------------------
+   Lista de presupuestos (barras horizontales tipo YNAB)
+   ---------------------------------------------------------- */
+.pres-list {
   display: flex;
   flex-direction: column;
-  text-align: left;
+  gap: 10px;
+  margin-bottom: 24px;
+}
+
+.pres-row {
+  display: grid;
+  grid-template-columns: 14px minmax(120px, 1.4fr) minmax(0, 3fr) auto 28px;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 14px;
+  background: #060411;
+  border-radius: 14px;
+  transition: background 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+  position: relative;
+}
+
+/* Clickeable: cursor + lift + glow al hover */
+.pres-row.pres-clickable { cursor: pointer; }
+.pres-row.pres-clickable:hover {
+  background: #0c0a25;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(196, 152, 90, 0.10);
+}
+
+/* Flecha indicador "click para abrir" */
+.pres-row.pres-clickable::after {
+  content: '›';
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 22px;
+  font-weight: 300;
+  color: rgba(196, 152, 90, 0);
+  transition: color 0.18s ease, right 0.18s ease;
+  pointer-events: none;
+}
+
+.pres-row.pres-clickable:hover::after {
+  color: rgba(196, 152, 90, 0.7);
+  right: 10px;
+}
+
+/* Cuando estamos en modo edicion, ocultar la flecha y mostrar el X */
+body.edit-mode .pres-row.pres-clickable { cursor: default; }
+body.edit-mode .pres-row.pres-clickable:hover {
+  transform: none;
+  box-shadow: none;
+}
+body.edit-mode .pres-row.pres-clickable::after { display: none; }
+
+.pres-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.pres-name {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.pres-name-main {
   font-size: 14px;
-  color: #ddd;
+  font-weight: 600;
+  color: #e8e4f3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.form-box input,
-.form-box select {
-  width: 100%;
-  padding: 10px;
+.pres-name-sub {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.4);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pres-bar-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.pres-bar-track {
+  height: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  overflow: hidden;
+  position: relative;
+}
+
+.pres-bar-fill {
+  height: 100%;
+  border-radius: 8px;
+  transition: width 0.4s ease, background 0.3s;
+  min-width: 4px;
+}
+
+.pres-bar-fill.ok      { background: linear-gradient(90deg, #27AE60, #2ECC71); }
+.pres-bar-fill.warn    { background: linear-gradient(90deg, #F1C40F, #F39C12); }
+.pres-bar-fill.danger  { background: linear-gradient(90deg, #E67E22, #D35400); }
+.pres-bar-fill.over    { background: linear-gradient(90deg, #E74C3C, #C0392B); }
+
+.pres-bar-meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.pres-bar-pct { font-weight: 600; }
+.pres-bar-pct.over { color: #E74C3C; }
+
+.pres-amount {
+  font-size: 14px;
+  font-weight: 700;
+  color: #F0ECF8;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.pres-amount-small {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.4);
+  font-weight: 500;
+}
+
+/* Badge tipo FIJO con dia */
+.pres-fijo-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: rgba(91, 141, 239, 0.12);
+  color: #5B8DEF;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 8px;
   border-radius: 10px;
-  border: none;
-  background: #3A345C;
-  color: #fff;
-  font-size: 14px;
+  letter-spacing: 0.3px;
 }
 
-.form-box input::placeholder {
-  color: #8A859E;
+/* Boton eliminar (modo edicion) */
+.pres-delete-action {
+  display: none;
+  justify-content: center;
 }
 
-.form-box button {
-  margin-top: 10px;
-  padding: 10px;
+.pres-delete-action.visible { display: flex; }
+
+.btn-pres-delete {
+  width: 26px;
+  height: 26px;
   border: none;
-  border-radius: 20px;
-  background: #2E2A50;
-  color: #F0B54D;
-  font-weight: bold;
+  border-radius: 50%;
+  background: rgba(231, 76, 60, 0.12);
+  color: #ff6b6b;
+  font-size: 16px;
+  line-height: 1;
   cursor: pointer;
-  transition: background 0.3s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
 }
 
-.form-box button:hover {
-  background: #32335F;
+.btn-pres-delete:hover { background: rgba(231, 76, 60, 0.24); }
+
+/* ----------------------------------------------------------
+   Sub-titulos
+   ---------------------------------------------------------- */
+.pres-section-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 18px 0 12px;
+}
+
+.pres-section-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #F0ECF8;
+  margin: 0;
+}
+
+.pres-section-hint {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.32);
+  font-style: italic;
+  letter-spacing: 0.2px;
+}
+
+/* Contexto de cuenta activa por presupuesto: subtitle pequeño */
+.pres-bar-context {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.35);
+  margin-top: 2px;
+}
+
+.pres-bar-context strong {
+  color: rgba(196, 152, 90, 0.75);
+  font-weight: 600;
+}
+
+/* ----------------------------------------------------------
+   Modal: tipo selector + color picker
+   ---------------------------------------------------------- */
+.tipo-selector {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.tipo-card {
+  flex: 1;
+  padding: 14px 12px;
+  border: 1.5px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.55);
+  font-family: 'Roboto', sans-serif;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  transition: border-color 0.2s, background 0.2s, color 0.2s;
+  text-align: left;
+}
+
+.tipo-card-title {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.tipo-card-desc {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.4);
+  font-weight: 400;
+}
+
+.tipo-card.active {
+  border-color: #C4985A;
+  background: rgba(196, 152, 90, 0.08);
+  color: #C4985A;
+}
+
+.tipo-card.active .tipo-card-desc { color: rgba(196, 152, 90, 0.7); }
+
+.color-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 4px;
+}
+
+.color-swatch {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: transform 0.15s, border-color 0.15s;
+  padding: 0;
+}
+
+.color-swatch:hover { transform: scale(1.1); }
+.color-swatch.active {
+  border-color: #fff;
+  box-shadow: 0 0 0 2px rgba(196, 152, 90, 0.5);
+}
+
+/* Empty state */
+.empty-pres {
+  background: #060411;
+  border-radius: 14px;
+  padding: 36px 20px;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.38);
+  font-size: 13px;
+}
+
+/* Modal de gasto rapido: titulo con dot de color del presupuesto */
+.pres-target {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  vertical-align: middle;
+}
+
+.pres-target-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
 }

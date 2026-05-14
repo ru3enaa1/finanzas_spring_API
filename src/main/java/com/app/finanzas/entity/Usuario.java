@@ -51,7 +51,10 @@ public class Usuario {
     private Set<Cuenta> cuentas = new LinkedHashSet<>();
 
     @OneToMany(mappedBy = "usuario", cascade = CascadeType.ALL, orphanRemoval = true)
-    private Set<GastoFijo> gastosFijos = new LinkedHashSet<>();
+    private Set<Presupuesto> presupuestos = new LinkedHashSet<>();
+
+    @OneToMany(mappedBy = "usuario", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<Fondo> fondos = new LinkedHashSet<>();
 
     public Integer getId() {
         return id;
@@ -109,11 +112,21 @@ public class Usuario {
         this.cuentas = cuentas;
     }
 
-    public Set<GastoFijo> getGastosFijos() {
-        return gastosFijos;
+    public Set<Presupuesto> getPresupuestos() {
+        return presupuestos;
     }
 
-    public void setGastosFijos(Set<GastoFijo> gastosFijos) {
-        this.gastosFijos = gastosFijos;
+    public void setPresupuestos(Set<Presupuesto> presupuestos) {
+        this.presupuestos = presupuestos;
+    }
+
+    public Set<Fondo> getFondos() {
+        return fondos;
+    }
+
+    public void setFondos(Set<Fondo> fondos) {
+        this.fondos = fondos;
     }
 }
+
+

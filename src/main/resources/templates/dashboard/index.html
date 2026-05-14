@@ -4,110 +4,237 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Panel - Pfm</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" th:href="@{/css/layout.css}">
     <link rel="stylesheet" th:href="@{/css/dashboard.css}">
 </head>
 <body>
-<div class="dashboard">
-    <aside class="sidebar">
-        <div class="logo">
-            <a th:href="@{/dashboard}">
-                <img th:src="@{/img/2.png}" alt="Pfm Logo">
-            </a>
+
+<div class="app-layout">
+
+    <!-- SIDEBAR -->
+    <aside th:replace="~{fragments/sidebar :: sidebar}"></aside>
+
+    <!-- ÁREA PRINCIPAL -->
+    <div class="main-wrapper">
+
+        <!-- TOPBAR -->
+        <header th:replace="~{fragments/topbar :: topbar}"></header>
+
+        <!-- TOGGLE DE MODOS -->
+        <div class="mode-toggle-wrap">
+            <div class="mode-toggle">
+                <button class="mode-btn active" id="btnPersonal" onclick="setMode('personal')">
+                    Finanzas personales
+                </button>
+                <button class="mode-btn" id="btnEmpresa" onclick="setMode('empresa')">
+                    Finanzas Empresa
+                </button>
+            </div>
         </div>
-        <nav class="menu">
-            <a th:href="@{/dashboard}"
-               th:classappend="${activePath == '/dashboard' ? ' active' : ''}">
-                <span class="icon">&#x1F4C8;</span> Tablero
-            </a>
-            <a th:href="@{/cuentas}"
-               th:classappend="${#strings.startsWith(activePath, '/cuentas') ? ' active' : ''}">
-                <span class="icon">&#x1F4B3;</span> Cuentas
-            </a>
-            <a th:href="@{/gastos-fijos}"
-               th:classappend="${#strings.startsWith(activePath, '/gastos-fijos') ? ' active' : ''}">
-                <span class="icon">&#x1F4B8;</span> Gastos fijos
-            </a>
-            <a th:href="@{/transacciones}"
-               th:classappend="${#strings.startsWith(activePath, '/transacciones') ? ' active' : ''}">
-                <span class="icon">&#x1F4B0;</span> Transacciones
-            </a>
-            <a th:href="@{/logout}">
-                <span class="icon">&#x1F512;</span> Cerrar sesion
-            </a>
-        </nav>
-    </aside>
 
-    <main class="main-content">
-        <header class="topbar">
-            <div class="progress">
-                <span class="piggy">&#x1F4B5;</span>
-                <span class="progress-text" th:text="${saldoTotal != null ? #numbers.formatDecimal(saldoTotal, 1, 'COMMA', 2, 'POINT') : '0,00'}"></span>
+        <!-- CONTENIDO DESPLAZABLE -->
+        <div class="content-scroll">
+
+            <!-- TARJETA DE BIENVENIDA -->
+            <section class="info-card">
+                <div class="info-card-text">
+                    <h3>Controla tus finanzas</h3>
+                    <p>
+                        Hola, <strong th:text="${usuario.nombre != null ? usuario.nombre : usuario.correo}"></strong>.
+                        Saca lo mejor de Pfm: maneja tus finanzas y planea tu futuro financiero en un solo lugar.
+                    </p>
+                </div>
+                <div class="info-card-img">
+                    <img th:src="@{/img/wallet.png}" alt="Finanzas Pfm">
+                </div>
+            </section>
+
+            <!-- RESUMEN FINANCIERO -->
+            <section class="resumen-section">
+                <h2 class="section-title">
+                    Resumen financiero
+                    <span class="period-badge"
+                          th:text="${mesActual + ' ' + anioActual}"></span>
+                </h2>
+
+                <div class="summary-grid">
+
+                    <!-- Mis cuentas -->
+                    <article class="summary-card">
+                        <div class="sc-header">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+                                 fill="none" stroke="currentColor" stroke-width="2"
+                                 stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="3" y="9" width="18" height="12" rx="2"/>
+                                <path d="M3 9l9-6 9 6"/>
+                                <line x1="9" y1="9" x2="9" y2="21"/>
+                                <line x1="15" y1="9" x2="15" y2="21"/>
+                            </svg>
+                            <h4>Mis cuentas</h4>
+                        </div>
+                        <ul class="sc-list">
+                            <li th:each="c : ${cuentas}">
+                                <span th:text="${c.nombre}"></span>
+                                <strong>
+                                    <span th:text="${simboloMoneda}">$</span>
+                                    <span th:text="${#numbers.formatDecimal(c.saldo.multiply(tasaActual), 1, 'COMMA', 2, 'POINT')}"></span>
+                                    <small style="opacity:0.5" th:text="${monedaActual}">COP</small>
+                                </strong>
+                            </li>
+                            <li th:if="${#lists.isEmpty(cuentas)}" class="sc-empty">
+                                Sin cuentas registradas.
+                            </li>
+                        </ul>
+                        <div class="sc-total" th:if="${!#lists.isEmpty(cuentas)}">
+                            <span>Saldo total</span>
+                            <strong>
+                                <span th:text="${simboloMoneda}">$</span>
+                                <span th:text="${#numbers.formatDecimal(saldoTotal, 1, 'COMMA', 2, 'POINT')}"></span>
+                                <small style="opacity:0.5" th:text="${monedaActual}">COP</small>
+                            </strong>
+                        </div>
+                        <a class="sc-link" th:href="@{/cuentas}">Gestionar cuentas</a>
+                    </article>
+
+                    <!-- Gastos fijos pendientes -->
+                    <article class="summary-card">
+                        <div class="sc-header">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+                                 fill="none" stroke="currentColor" stroke-width="2"
+                                 stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="12" y1="1" x2="12" y2="23"/>
+                                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                            </svg>
+                            <h4>Gastos fijos pendientes</h4>
+                        </div>
+                        <ul class="sc-list">
+                            <li th:each="g : ${gastosPendientes}">
+                                <span th:text="${g.nombre}"></span>
+                                <strong>
+                                    <span th:text="${simboloMoneda}">$</span>
+                                    <span th:text="${#numbers.formatDecimal(g.montoEstimado.multiply(tasaActual), 1, 'COMMA', 2, 'POINT')}"></span>
+                                </strong>
+                            </li>
+                            <li th:if="${#lists.isEmpty(gastosPendientes)}" class="sc-empty sc-ok">
+                                Todo al día. Bien hecho!
+                            </li>
+                        </ul>
+                        <a class="sc-link" th:href="@{/presupuestos}">Administrar presupuestos</a>
+                    </article>
+
+                    <!-- Transacciones recientes -->
+                    <article class="summary-card">
+                        <div class="sc-header">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+                                 fill="none" stroke="currentColor" stroke-width="2"
+                                 stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="2" y="5" width="20" height="14" rx="2"/>
+                                <line x1="2" y1="10" x2="22" y2="10"/>
+                            </svg>
+                            <h4>Transacciones recientes</h4>
+                        </div>
+                        <ul class="sc-list">
+                            <li th:each="t : ${transaccionesRecientes}">
+                                <span>
+                                    <strong th:text="${t.tipo}"></strong>
+                                    <small th:text="${t.fecha != null ? t.fecha.format(formateadorFechaTransaccion) : ''}"></small>
+                                </span>
+                                <strong th:classappend="${t.tipo.name() == 'INGRESO'} ? ' amount-ingreso' : ' amount-gasto'">
+                                    <span th:text="${t.tipo.name() == 'INGRESO' ? '+' : '-'}"></span>
+                                    <span th:text="${simboloMoneda}">$</span>
+                                    <span th:text="${#numbers.formatDecimal(t.monto.multiply(tasaActual), 1, 'COMMA', 2, 'POINT')}"></span>
+                                </strong>
+                            </li>
+                            <li th:if="${#lists.isEmpty(transaccionesRecientes)}" class="sc-empty">
+                                Aún sin movimientos.
+                            </li>
+                        </ul>
+                        <a class="sc-link" th:href="@{/transacciones}">Ver transacciones</a>
+                    </article>
+
+                    <!-- Alertas recientes -->
+                    <article class="summary-card">
+                        <div class="sc-header">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+                                 fill="none" stroke="currentColor" stroke-width="2"
+                                 stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+                                <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+                            </svg>
+                            <h4>Alertas recientes</h4>
+                        </div>
+                        <ul class="sc-list">
+                            <li th:each="a : ${alertasRecientes}">
+                                <span th:text="${a.descripcion}"></span>
+                                <small th:text="${a.fechaHora != null ? #temporals.format(a.fechaHora, 'dd/MM HH:mm') : ''}"></small>
+                            </li>
+                            <li th:if="${#lists.isEmpty(alertasRecientes)}" class="sc-empty">
+                                Sin alertas generadas.
+                            </li>
+                        </ul>
+                        <a class="sc-link" th:href="@{/alertas}">Ver alertas</a>
+                    </article>
+
+                </div>
+            </section>
+
+            <!-- ARTE GEOMÉTRICO DECORATIVO -->
+            <div class="geo-art" aria-hidden="true">
+                <div class="geo-cell"><div class="geo-shape gs-circle gs-blue-dark"></div></div>
+                <div class="geo-cell"><div class="geo-shape gs-tri-right gs-purple"></div></div>
+                <div class="geo-cell"><div class="geo-shape gs-half-top gs-purple-mid"></div></div>
+                <div class="geo-cell geo-dark"></div>
+                <div class="geo-cell"><div class="geo-shape gs-half-right gs-purple-light"></div></div>
+                <div class="geo-cell"><div class="geo-shape gs-tri-left gs-blue-mid"></div></div>
+                <div class="geo-cell"><div class="geo-shape gs-circle-sm gs-purple-deep"></div></div>
+                <div class="geo-cell"><div class="geo-shape gs-tri-up gs-blue-purple"></div></div>
+                <div class="geo-cell geo-dark"></div>
+                <div class="geo-cell"><div class="geo-shape gs-half-left gs-purple-mid"></div></div>
             </div>
-            <div class="user">
-                <span th:text="${usuario.nombre != null ? usuario.nombre : usuario.correo}"></span>
-            </div>
-        </header>
 
-        <section class="info-card">
-            <div class="info-text">
-                <h3 th:text="${'Hola ' + (usuario.nombre != null ? usuario.nombre : usuario.correo)}"></h3>
-                <p>Estas son tus finanzas para
-                    <span th:text="${mesActual}"></span>
-                    / <span th:text="${anioActual}"></span>.
-                </p>
-                <p>Revisa tus cuentas y marca los gastos fijos pagados para mantener tus balances actualizados.</p>
-            </div>
-            <div class="info-img">
-                <img th:src="@{/img/wallet.png}" alt="Wallet">
-            </div>
-        </section>
+        </div><!-- /content-scroll -->
+    </div><!-- /main-wrapper -->
+</div><!-- /app-layout -->
 
-        <section class="cards-grid">
-            <article class="card resumen">
-                <h4>Resumen de cuentas</h4>
-                <ul>
-                    <li th:each="cuenta : ${cuentas}">
-                        <span th:text="${cuenta.tipo}"></span>
-                        <strong th:text="${#numbers.formatDecimal(cuenta.saldo, 1, 'COMMA', 2, 'POINT')}"></strong>
-                    </li>
-                    <li th:if="${#lists.isEmpty(cuentas)}">Aun no tienes cuentas registradas.</li>
-                </ul>
-                <a class="card-link" th:href="@{/cuentas}">Gestionar cuentas</a>
-            </article>
-
-            <article class="card resumen">
-                <h4>Gastos fijos pendientes</h4>
-                <ul>
-                    <li th:each="gasto : ${gastosPendientes}">
-                        <span th:text="${gasto.nombre}"></span>
-                        <strong th:text="${#numbers.formatDecimal(gasto.montoEstimado, 1, 'COMMA', 2, 'POINT')}"></strong>
-                    </li>
-                    <li th:if="${#lists.isEmpty(gastosPendientes)}">Todo al dia. Bien hecho!</li>
-                </ul>
-                <a class="card-link" th:href="@{/gastos-fijos}">Administrar gastos fijos</a>
-            </article>
-
-            <article class="card resumen">
-                <h4>Transacciones recientes</h4>
-                <ul>
-                    <li th:each="transaccion : ${transaccionesRecientes}">
-                        <span>
-                            <strong th:text="${transaccion.tipo}"></strong>
-                            <span th:text="${transaccion.fecha != null ? transaccion.fecha.format(formateadorFechaTransaccion) : ''}"></span>
-                        </span>
-                        <strong th:text="${#numbers.formatDecimal(transaccion.monto, 1, 'COMMA', 2, 'POINT')}"></strong>
-                    </li>
-                    <li th:if="${#lists.isEmpty(transaccionesRecientes)}">Aun no registras movimientos.</li>
-                </ul>
-                <a class="card-link" th:href="@{/transacciones}">Ver todas las transacciones</a>
-            </article>
-        </section>
-
-        <section class="graphic">
-            <img th:src="@{/img/BG.png}" alt="Resumen grafico">
-        </section>
-    </main>
+<!-- TOAST: MODO EMPRESA -->
+<div class="toast-notif" id="toastEmpresa">
+    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+         fill="none" stroke="currentColor" stroke-width="2"
+         stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"/>
+        <line x1="12" y1="8" x2="12" y2="12"/>
+        <line x1="12" y1="16" x2="12.01" y2="16"/>
+    </svg>
+    <span>Modo Empresa en desarrollo — Disponible en la próxima versión de PFM</span>
 </div>
+
+<script>
+    function setMode(mode) {
+        var btnPersonal = document.getElementById('btnPersonal');
+        var btnEmpresa  = document.getElementById('btnEmpresa');
+        if (mode === 'empresa') {
+            btnEmpresa.classList.add('active');
+            btnPersonal.classList.remove('active');
+            showToast('toastEmpresa');
+            setTimeout(function() {
+                btnPersonal.classList.add('active');
+                btnEmpresa.classList.remove('active');
+            }, 3200);
+        } else {
+            btnPersonal.classList.add('active');
+            btnEmpresa.classList.remove('active');
+        }
+    }
+
+    function showToast(id) {
+        var t = document.getElementById(id);
+        t.classList.add('show');
+        setTimeout(function() { t.classList.remove('show'); }, 3000);
+    }
+</script>
+
 </body>
 </html>
-

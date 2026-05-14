@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<header th:fragment="topbar" class="topbar">
+    <div class="topbar-right">
+
+        <!-- Dropdown Moneda -->
+        <div class="topbar-btn-wrap" id="wrapMoneda">
+            <button class="btn-moneda" onclick="toggleDropdown('menuMoneda')">
+                <span th:text="${monedaActual}">COP</span>
+                <svg class="chevron" xmlns="http://www.w3.org/2000/svg" width="14" height="14"
+                     viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                     stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="6 9 12 15 18 9"/>
+                </svg>
+            </button>
+            <div class="dropdown-menu" id="menuMoneda">
+                <form th:each="m : ${monedasDisponibles}"
+                      th:action="@{/preferencias/moneda}"
+                      method="post"
+                      class="moneda-row-form">
+                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                    <input type="hidden" name="moneda" th:value="${m}">
+                    <input type="hidden" name="redirect" th:value="${activePath}">
+                    <button type="submit"
+                            class="dropdown-item moneda-row"
+                            th:classappend="${m == monedaActual} ? ' moneda-activa' : ''">
+                        <span class="di-moneda-code" th:text="${m}">COP</span>
+                        <span class="di-moneda-symbol"
+                              th:text="${m == 'EUR' ? '€' : '$'}">$</span>
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Dropdown Cuenta -->
+        <div class="topbar-btn-wrap" id="wrapCuenta">
+            <button class="btn-cuenta" onclick="toggleDropdown('menuCuenta')">
+                <span th:text="${cuentaActivaNombre != null} ? ${cuentaActivaNombre} : (${cuentas != null && !#lists.isEmpty(cuentas)} ? ${cuentas[0].nombre} : 'Cuenta')">Cuenta</span>
+                <svg class="chevron" xmlns="http://www.w3.org/2000/svg" width="14" height="14"
+                     viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                     stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="6 9 12 15 18 9"/>
+                </svg>
+            </button>
+            <div class="dropdown-menu" id="menuCuenta">
+                <form th:each="c : ${cuentas}"
+                      th:action="@{/cuentas/seleccionar}"
+                      method="post"
+                      class="cuenta-row-form">
+                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                    <input type="hidden" name="cuentaId" th:value="${c.id}">
+                    <input type="hidden" name="redirect" th:value="${activePath}">
+                    <button type="submit"
+                            class="dropdown-item cuenta-row cuenta-row-btn"
+                            th:classappend="${c.id == cuentaActivaId} ? ' cuenta-activa-row' : ''">
+                        <span class="di-dot"
+                              th:classappend="'dot-' + (${coloresPorTipo != null && coloresPorTipo[c.tipo] != null} ? ${coloresPorTipo[c.tipo]} : 'default')"></span>
+                        <span class="di-tipo" th:text="${c.nombre}"></span>
+                        <span class="di-saldo"
+                              th:text="${#numbers.formatDecimal(c.saldo, 1, 'COMMA', 2, 'POINT')}"></span>
+                    </button>
+                </form>
+                <div th:if="${cuentas == null || #lists.isEmpty(cuentas)}" class="dropdown-item di-vacio">
+                    Sin cuentas registradas
+                </div>
+            </div>
+        </div>
+
+        <!-- Dropdown Usuario -->
+        <div class="topbar-btn-wrap" id="wrapUsuario">
+            <button class="btn-usuario" onclick="toggleDropdown('menuUsuario')">
+                <span th:text="${usuario != null} ? (${usuario.nombre != null} ? ${usuario.nombre} : ${usuario.correo}) : 'Usuario'">Usuario</span>
+                <svg class="chevron" xmlns="http://www.w3.org/2000/svg" width="14" height="14"
+                     viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                     stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="6 9 12 15 18 9"/>
+                </svg>
+            </button>
+            <div class="dropdown-menu dropdown-right" id="menuUsuario">
+
+                <span class="dropdown-item di-disabled" title="Próximamente">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24"
+                         fill="none" stroke="currentColor" stroke-width="2"
+                         stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                        <circle cx="12" cy="7" r="4"/>
+                    </svg>
+                    <span>Editar perfil</span>
+                    <small class="badge-pronto">Próximamente</small>
+                </span>
+
+                <div class="dropdown-sep"></div>
+
+                <a th:href="@{/logout}" class="dropdown-item di-logout">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24"
+                         fill="none" stroke="currentColor" stroke-width="2"
+                         stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                        <polyline points="16 17 21 12 16 7"/>
+                        <line x1="21" y1="12" x2="9" y2="12"/>
+                    </svg>
+                    <span>Cerrar sesión</span>
+                </a>
+
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        function toggleDropdown(id) {
+            var target = document.getElementById(id);
+            document.querySelectorAll('.dropdown-menu').forEach(function(m) {
+                if (m.id !== id) m.classList.remove('open');
+            });
+            target.classList.toggle('open');
+        }
+
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.topbar-btn-wrap')) {
+                document.querySelectorAll('.dropdown-menu').forEach(function(m) {
+                    m.classList.remove('open');
+                });
+            }
+        });
+
+        // Auto-fade de banners (.alert): success 3.5s, error/info 5s
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('.alert').forEach(function(alert) {
+                var delay = alert.classList.contains('success') ? 3500 : 5000;
+                setTimeout(function() { alert.classList.add('fade-out'); }, delay);
+                alert.addEventListener('click', function() { alert.classList.add('fade-out'); });
+            });
+
+            // Aplicar color dinamico a elementos con data-color
+            // (workaround Thymeleaf 3.x que bloquea Strings en th:style)
+            document.querySelectorAll('[data-color]').forEach(function(el) {
+                var color = el.getAttribute('data-color');
+                if (!color) return;
+                if (el.classList.contains('pres-dot')) {
+                    el.style.background = color;
+                } else if (el.classList.contains('txn-budget-icon')) {
+                    el.style.background = color + '22';
+                    el.style.color = color;
+                }
+            });
+        });
+    </script>
+</header>
+
+</body>
+</html>

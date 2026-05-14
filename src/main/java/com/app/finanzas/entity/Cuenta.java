@@ -32,6 +32,11 @@ public class Cuenta {
     private Usuario usuario;
 
     @NotBlank
+    @Size(max = 60)
+    @Column(nullable = false, length = 60)
+    private String nombre;
+
+    @NotBlank
     @Size(max = 50)
     @Column(nullable = false, length = 50)
     private String tipo;
@@ -39,6 +44,9 @@ public class Cuenta {
     @DecimalMin("0.00")
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal saldo = BigDecimal.ZERO;
+
+    @Column(name = "saldo_inicial", nullable = false, precision = 12, scale = 2)
+    private BigDecimal saldoInicial = BigDecimal.ZERO;
 
     @OneToMany(mappedBy = "cuenta", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<Transaccion> transacciones = new LinkedHashSet<>();
@@ -59,6 +67,14 @@ public class Cuenta {
         this.usuario = usuario;
     }
 
+    public String getNombre() {
+        return nombre;
+    }
+
+    public void setNombre(String nombre) {
+        this.nombre = nombre;
+    }
+
     public String getTipo() {
         return tipo;
     }
@@ -73,6 +89,14 @@ public class Cuenta {
 
     public void setSaldo(BigDecimal saldo) {
         this.saldo = saldo;
+    }
+
+    public BigDecimal getSaldoInicial() {
+        return saldoInicial;
+    }
+
+    public void setSaldoInicial(BigDecimal saldoInicial) {
+        this.saldoInicial = saldoInicial;
     }
 
     public Set<Transaccion> getTransacciones() {
