@@ -143,26 +143,6 @@ Para detalles técnicos profundos de cada módulo, consulta [DOCUMENTACION.md](D
 
 ---
 
-## API REST — endpoints disponibles
-
-Además de la interfaz web, PFM expone una API REST para integraciones externas.
-
-### Probar la API desde Postman
-
-1. Levanta la aplicación (paso 4 del setup).
-2. **Registrar un usuario** — `POST http://localhost:8080/api/auth/register`
-   ```json
-   {
-     "nombre": "Ana",
-     "apellido": "Diaz",
-     "correo": "ana@example.com",
-     "contrasena": "claveSegura123"
-   }
-   ```
-3. **Iniciar sesión** — `POST http://localhost:8080/api/auth/login` con `correo` y `contrasena`. La cookie de sesión se mantiene para los siguientes requests.
-4. **Operar contra cuentas y transacciones** — endpoints autenticados bajo `/api/cuentas` y `/api/transacciones`.
-
----
 
 ## Estructura del proyecto
 
