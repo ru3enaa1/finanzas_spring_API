@@ -1,5 +1,6 @@
 package com.app.finanzas.controller;
 
+import com.app.finanzas.dto.SegmentoCuenta;
 import com.app.finanzas.entity.Cuenta;
 import com.app.finanzas.entity.Fondo;
 import com.app.finanzas.entity.TipoTransaccion;
@@ -176,6 +177,13 @@ public class FondoController {
             aportadoEnCuentaActiva.merge(t.getFondo().getId(), t.getMonto(), BigDecimal::add);
         }
 
+        // Desglose por cuenta para cada fondo (segmentos de barra)
+        Map<Integer, List<Object[]>> desglosePorFondo = new HashMap<>();
+        for (Object[] row : transaccionRepository.desglosePorCuentaPorFondo(usuario)) {
+            Integer fondoId = (Integer) row[0];
+            desglosePorFondo.computeIfAbsent(fondoId, k -> new ArrayList<>()).add(row);
+        }
+
         // Pre-calcular vista de cada fondo
         List<FondoVista> vistas = new ArrayList<>();
         BigDecimal totalMeta = BigDecimal.ZERO;
@@ -198,8 +206,12 @@ public class FondoController {
             BigDecimal aportadoEnCuentaConv = monedaService.convertir(
                     aportadoEnCuentaActiva.getOrDefault(f.getId(), BigDecimal.ZERO), moneda);
 
+            List<SegmentoCuenta> segmentos = construirSegmentos(
+                    desglosePorFondo.getOrDefault(f.getId(), List.of()),
+                    meta, tasa);
+
             vistas.add(new FondoVista(f, aportado, meta, aportadoConv, metaConv,
-                    aportadoEnCuentaConv, pct, pctBar, metaAlcanzada));
+                    aportadoEnCuentaConv, pct, pctBar, metaAlcanzada, segmentos));
             totalMeta = totalMeta.add(meta);
             totalAportado = totalAportado.add(aportado);
         }
@@ -221,6 +233,24 @@ public class FondoController {
         model.addAttribute("formulario", formulario);
         model.addAttribute("categoriasSugeridas", CATEGORIAS_SUGERIDAS);
         model.addAttribute("agrupadas", agrupadas);
+    }
+
+    private List<SegmentoCuenta> construirSegmentos(List<Object[]> filas, BigDecimal meta, BigDecimal tasa) {
+        if (filas == null || filas.size() < 2 || meta == null
+                || meta.compareTo(BigDecimal.ZERO) <= 0) {
+            return List.of();
+        }
+        List<SegmentoCuenta> segmentos = new ArrayList<>(filas.size());
+        for (Object[] row : filas) {
+            Integer cuentaId = (Integer) row[1];
+            String cuentaNombre = (String) row[2];
+            BigDecimal monto = (BigDecimal) row[3];
+            BigDecimal montoConv = monto.multiply(tasa).setScale(2, RoundingMode.HALF_UP);
+            double pctBar = monto.doubleValue() / meta.doubleValue() * 100.0;
+            if (pctBar > 100.0) pctBar = 100.0;
+            segmentos.add(new SegmentoCuenta(cuentaId, cuentaNombre, monto, montoConv, pctBar));
+        }
+        return segmentos;
     }
 
     private Usuario obtenerUsuarioAutenticado() {
@@ -247,11 +277,13 @@ public class FondoController {
         private final double pct;
         private final double pctBar;
         private final boolean metaAlcanzada;
+        private final List<SegmentoCuenta> segmentos;
 
         public FondoVista(Fondo fondo, BigDecimal aportado, BigDecimal meta,
                           BigDecimal aportadoConv, BigDecimal metaConv,
                           BigDecimal aportadoCuentaActivaConv,
-                          double pct, double pctBar, boolean metaAlcanzada) {
+                          double pct, double pctBar, boolean metaAlcanzada,
+                          List<SegmentoCuenta> segmentos) {
             this.fondo = fondo;
             this.aportado = aportado;
             this.meta = meta;
@@ -263,6 +295,7 @@ public class FondoController {
             this.pct = pct;
             this.pctBar = pctBar;
             this.metaAlcanzada = metaAlcanzada;
+            this.segmentos = segmentos != null ? segmentos : List.of();
         }
 
         public Fondo getFondo() { return fondo; }
@@ -275,5 +308,7 @@ public class FondoController {
         public double getPct() { return pct; }
         public double getPctBar() { return pctBar; }
         public boolean isMetaAlcanzada() { return metaAlcanzada; }
+        public List<SegmentoCuenta> getSegmentos() { return segmentos; }
+        public boolean isSegmentado() { return !segmentos.isEmpty(); }
     }
 }

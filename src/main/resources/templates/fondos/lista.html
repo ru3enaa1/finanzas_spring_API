@@ -131,7 +131,19 @@
                     </div>
 
                     <div class="pres-bar-wrap">
-                        <div class="pres-bar-track">
+                        <!-- Si hay 2+ cuentas que aportaron, barra segmentada (mismo color del fondo) -->
+                        <div class="pres-bar-track" th:if="${fv.segmentado}">
+                            <div th:each="seg : ${fv.segmentos}"
+                                 class="pres-bar-fill fondo-bar-fill pres-bar-segment"
+                                 th:attr="data-color=${fv.fondo.color},
+                                          data-cuenta=${seg.cuentaNombre},
+                                          data-monto=${#numbers.formatDecimal(seg.montoConvertido, 1, 'COMMA', 2, 'POINT')},
+                                          data-moneda=${simboloMoneda},
+                                          title=${seg.cuentaNombre + ': ' + simboloMoneda + #numbers.formatDecimal(seg.montoConvertido, 1, 'COMMA', 2, 'POINT')}"
+                                 th:style="'width:' + ${seg.pctBar} + '%'"></div>
+                        </div>
+                        <!-- Barra simple cuando hay 0 o 1 cuenta -->
+                        <div class="pres-bar-track" th:if="${!fv.segmentado}">
                             <div class="pres-bar-fill fondo-bar-fill"
                                  th:attr="data-color=${fv.fondo.color}"
                                  th:style="'width:' + ${fv.pctBar} + '%'"></div>

@@ -1,11 +1,13 @@
 package com.app.finanzas.controller;
 
+import com.app.finanzas.dto.SegmentoCuenta;
 import com.app.finanzas.entity.Cuenta;
 import com.app.finanzas.entity.Presupuesto;
 import com.app.finanzas.entity.PresupuestoPeriodo;
 import com.app.finanzas.entity.TipoTransaccion;
 import com.app.finanzas.entity.Transaccion;
 import com.app.finanzas.entity.Usuario;
+import com.app.finanzas.repository.TransaccionRepository;
 import com.app.finanzas.service.CuentaService;
 import com.app.finanzas.service.MonedaService;
 import com.app.finanzas.service.PresupuestoService;
@@ -61,17 +63,20 @@ public class PresupuestoController {
 
     private final PresupuestoService presupuestoService;
     private final TransaccionService transaccionService;
+    private final TransaccionRepository transaccionRepository;
     private final UsuarioService usuarioService;
     private final CuentaService cuentaService;
     private final MonedaService monedaService;
 
     public PresupuestoController(PresupuestoService presupuestoService,
                                  TransaccionService transaccionService,
+                                 TransaccionRepository transaccionRepository,
                                  UsuarioService usuarioService,
                                  CuentaService cuentaService,
                                  MonedaService monedaService) {
         this.presupuestoService = presupuestoService;
         this.transaccionService = transaccionService;
+        this.transaccionRepository = transaccionRepository;
         this.usuarioService = usuarioService;
         this.cuentaService = cuentaService;
         this.monedaService = monedaService;
@@ -197,7 +202,15 @@ public class PresupuestoController {
             gastadoEnCuentaActiva.merge(t.getPresupuesto().getId(), t.getMonto(), BigDecimal::add);
         }
 
-        // Pre-calcular vista de cada presupuesto (gastado global, contexto de cuenta, %, estado)
+        // Desglose por cuenta para cada presupuesto del mes (segmentos de barra)
+        // Query agregada en BD: presupuestoId -> List<[cuentaId, cuentaNombre, suma]>
+        Map<Integer, List<Object[]>> desglosePorPresupuesto = new java.util.HashMap<>();
+        for (Object[] row : transaccionRepository.desglosePorCuentaPorPresupuestoEnRango(usuario, inicioMes, finMes)) {
+            Integer presupuestoId = (Integer) row[0];
+            desglosePorPresupuesto.computeIfAbsent(presupuestoId, k -> new ArrayList<>()).add(row);
+        }
+
+        // Pre-calcular vista de cada presupuesto (gastado global, contexto de cuenta, %, estado, segmentos)
         List<PresupuestoVista> vistas = new ArrayList<>();
         BigDecimal totalGastadoPresupuestos = BigDecimal.ZERO;
         BigDecimal totalLimite = BigDecimal.ZERO;
@@ -220,9 +233,14 @@ public class PresupuestoController {
             BigDecimal gastadoEnCuentaConv = monedaService.convertir(
                     gastadoEnCuentaActiva.getOrDefault(p.getId(), BigDecimal.ZERO), moneda);
 
+            // Construir segmentos solo si hay 2+ cuentas que aportaron
+            List<SegmentoCuenta> segmentos = construirSegmentos(
+                    desglosePorPresupuesto.getOrDefault(p.getId(), List.of()),
+                    limite, tasa);
+
             vistas.add(new PresupuestoVista(p, gastado, limite,
                     gastadoConv, limiteConv, gastadoEnCuentaConv,
-                    pct, pctBar, estado));
+                    pct, pctBar, estado, segmentos));
             totalGastadoPresupuestos = totalGastadoPresupuestos.add(gastado);
             totalLimite = totalLimite.add(limite);
         }
@@ -263,11 +281,13 @@ public class PresupuestoController {
         private final double pct;
         private final double pctBar;
         private final String estado;
+        private final List<SegmentoCuenta> segmentos;
 
         public PresupuestoVista(Presupuesto presupuesto, BigDecimal gastado, BigDecimal limite,
                                 BigDecimal gastadoConv, BigDecimal limiteConv,
                                 BigDecimal gastadoCuentaActivaConv,
-                                double pct, double pctBar, String estado) {
+                                double pct, double pctBar, String estado,
+                                List<SegmentoCuenta> segmentos) {
             this.presupuesto = presupuesto;
             this.gastado = gastado;
             this.limite = limite;
@@ -279,6 +299,7 @@ public class PresupuestoController {
             this.pct = pct;
             this.pctBar = pctBar;
             this.estado = estado;
+            this.segmentos = segmentos != null ? segmentos : List.of();
         }
 
         public Presupuesto getPresupuesto() { return presupuesto; }
@@ -292,6 +313,32 @@ public class PresupuestoController {
         public double getPctBar() { return pctBar; }
         public String getEstado() { return estado; }
         public boolean isOver() { return "over".equals(estado); }
+        public List<SegmentoCuenta> getSegmentos() { return segmentos; }
+        public boolean isSegmentado() { return !segmentos.isEmpty(); }
+    }
+
+    /**
+     * Construye segmentos de barra a partir del desglose por cuenta.
+     * Devuelve lista vacia si hay 0 o 1 cuenta (1 cuenta = no aporta info nueva,
+     * la barra simple sigue siendo correcta).
+     */
+    private List<SegmentoCuenta> construirSegmentos(List<Object[]> filas, BigDecimal limite,
+                                                     BigDecimal tasa) {
+        if (filas == null || filas.size() < 2 || limite == null
+                || limite.compareTo(BigDecimal.ZERO) <= 0) {
+            return List.of();
+        }
+        List<SegmentoCuenta> segmentos = new ArrayList<>(filas.size());
+        for (Object[] row : filas) {
+            Integer cuentaId = (Integer) row[1];
+            String cuentaNombre = (String) row[2];
+            BigDecimal monto = (BigDecimal) row[3];
+            BigDecimal montoConv = monto.multiply(tasa).setScale(2, java.math.RoundingMode.HALF_UP);
+            double pctBar = monto.doubleValue() / limite.doubleValue() * 100.0;
+            if (pctBar > 100.0) pctBar = 100.0;
+            segmentos.add(new SegmentoCuenta(cuentaId, cuentaNombre, monto, montoConv, pctBar));
+        }
+        return segmentos;
     }
 
     private Usuario obtenerUsuarioAutenticado() {

@@ -129,7 +129,19 @@
                     </div>
 
                     <div class="pres-bar-wrap">
-                        <div class="pres-bar-track">
+                        <!-- Si hay 2+ cuentas que aportaron, barra segmentada con tooltip -->
+                        <div class="pres-bar-track" th:if="${pv.segmentado}">
+                            <div th:each="seg : ${pv.segmentos}"
+                                 class="pres-bar-fill pres-bar-segment"
+                                 th:classappend="${pv.estado}"
+                                 th:style="'width:' + ${seg.pctBar} + '%'"
+                                 th:attr="data-cuenta=${seg.cuentaNombre},
+                                          data-monto=${#numbers.formatDecimal(seg.montoConvertido, 1, 'COMMA', 2, 'POINT')},
+                                          data-moneda=${simboloMoneda},
+                                          title=${seg.cuentaNombre + ': ' + simboloMoneda + #numbers.formatDecimal(seg.montoConvertido, 1, 'COMMA', 2, 'POINT')}"></div>
+                        </div>
+                        <!-- Barra simple cuando hay 0 o 1 cuenta -->
+                        <div class="pres-bar-track" th:if="${!pv.segmentado}">
                             <div class="pres-bar-fill"
                                  th:classappend="${pv.estado}"
                                  th:style="'width:' + ${pv.pctBar} + '%'"></div>

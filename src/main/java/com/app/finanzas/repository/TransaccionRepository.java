@@ -53,4 +53,35 @@ public interface TransaccionRepository extends JpaRepository<Transaccion, Intege
            "AND t.tipo = com.app.finanzas.entity.TipoTransaccion.GASTO")
     BigDecimal sumarAportadoPorFondoYCuenta(@Param("fondoId") Integer fondoId,
                                              @Param("cuentaId") Integer cuentaId);
+
+    /**
+     * Desglose de gasto del MES ACTUAL por cuenta para todos los presupuestos del usuario.
+     * Retorna [presupuestoId, cuentaId, cuentaNombre, sumMonto].
+     * Usado para barras segmentadas por cuenta.
+     */
+    @Query("SELECT t.presupuesto.id, t.cuenta.id, t.cuenta.nombre, SUM(t.monto) " +
+           "FROM Transaccion t " +
+           "WHERE t.presupuesto IS NOT NULL " +
+           "AND t.cuenta.usuario = :usuario " +
+           "AND t.tipo = com.app.finanzas.entity.TipoTransaccion.GASTO " +
+           "AND t.fecha BETWEEN :inicio AND :fin " +
+           "GROUP BY t.presupuesto.id, t.cuenta.id, t.cuenta.nombre " +
+           "ORDER BY SUM(t.monto) DESC")
+    List<Object[]> desglosePorCuentaPorPresupuestoEnRango(
+            @Param("usuario") Usuario usuario,
+            @Param("inicio") java.time.LocalDate inicio,
+            @Param("fin") java.time.LocalDate fin);
+
+    /**
+     * Desglose acumulado de aportes por cuenta para todos los fondos del usuario (sin rango temporal).
+     * Retorna [fondoId, cuentaId, cuentaNombre, sumMonto].
+     */
+    @Query("SELECT t.fondo.id, t.cuenta.id, t.cuenta.nombre, SUM(t.monto) " +
+           "FROM Transaccion t " +
+           "WHERE t.fondo IS NOT NULL " +
+           "AND t.cuenta.usuario = :usuario " +
+           "AND t.tipo = com.app.finanzas.entity.TipoTransaccion.GASTO " +
+           "GROUP BY t.fondo.id, t.cuenta.id, t.cuenta.nombre " +
+           "ORDER BY SUM(t.monto) DESC")
+    List<Object[]> desglosePorCuentaPorFondo(@Param("usuario") Usuario usuario);
 }

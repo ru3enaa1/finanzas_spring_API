@@ -147,8 +147,10 @@ body.edit-mode .pres-row.pres-clickable::after { display: none; }
   height: 10px;
   background: rgba(255, 255, 255, 0.05);
   border-radius: 8px;
-  overflow: hidden;
   position: relative;
+  display: flex;
+  align-items: stretch;
+  /* overflow: visible para permitir tooltip arriba del segmento */
 }
 
 .pres-bar-fill {
@@ -156,6 +158,62 @@ body.edit-mode .pres-row.pres-clickable::after { display: none; }
   border-radius: 8px;
   transition: width 0.4s ease, background 0.3s;
   min-width: 4px;
+}
+
+/* Segmento de barra: cada cuenta que aporta es un segmento contiguo.
+   Sin border-radius interno + linea divisoria sutil derecha (excepto el ultimo). */
+.pres-bar-segment {
+  border-radius: 0;
+  position: relative;
+  cursor: help;
+}
+
+.pres-bar-segment:first-child {
+  border-top-left-radius: 8px;
+  border-bottom-left-radius: 8px;
+}
+
+.pres-bar-segment:last-child {
+  border-top-right-radius: 8px;
+  border-bottom-right-radius: 8px;
+}
+
+.pres-bar-segment:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: rgba(255, 255, 255, 0.35);
+  pointer-events: none;
+}
+
+/* Tooltip CSS al hover (desktop). El atributo title nativo sirve como fallback en mobile. */
+.pres-bar-segment[data-cuenta]:hover::before {
+  content: attr(data-cuenta) ': ' attr(data-moneda) ' ' attr(data-monto);
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1a1530;
+  border: 1px solid rgba(196, 152, 90, 0.32);
+  color: #F0ECF8;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 6px 10px;
+  border-radius: 8px;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 50;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  opacity: 0;
+  animation: tooltipFadeIn 0.15s ease forwards;
+}
+
+@keyframes tooltipFadeIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(2px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
 }
 
 .pres-bar-fill.ok      { background: linear-gradient(90deg, #27AE60, #2ECC71); }
