@@ -8,6 +8,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" th:href="@{/css/layout.css}">
+    <link rel="stylesheet" th:href="@{/css/transacciones.css}">
+    <link rel="stylesheet" th:href="@{/css/presupuestos.css}">
     <link rel="stylesheet" th:href="@{/css/fondos.css}">
 </head>
 <body>
@@ -20,95 +22,516 @@
 
         <div class="content-scroll">
 
-            <section class="form-section">
-                <h2>Crear fondo</h2>
-                <div class="alert success" th:if="${mensajeExito != null}" th:text="${mensajeExito}"></div>
-                <div class="alert error" th:if="${mensajeError != null}" th:text="${mensajeError}"></div>
+            <div class="alert success" th:if="${mensajeExito != null}" th:text="${mensajeExito}"></div>
+            <div class="alert error"   th:if="${mensajeError != null}" th:text="${mensajeError}"></div>
 
-                <form th:action="@{/fondos}" th:object="${fondo}" method="post" class="form-grid">
-                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
-                    <label>
-                        Nombre
-                        <input type="text" th:field="*{nombre}" placeholder="Ej: Vacaciones" required>
-                        <span class="error" th:if="${#fields.hasErrors('nombre')}" th:errors="*{nombre}"></span>
-                    </label>
-                    <label>
-                        Monto anual meta
-                        <input type="number" step="0.01" min="0.01" th:field="*{montoAnual}" required>
-                        <span class="error" th:if="${#fields.hasErrors('montoAnual')}" th:errors="*{montoAnual}"></span>
-                    </label>
-                    <div class="form-actions">
-                        <button type="submit">Guardar</button>
-                    </div>
-                </form>
-            </section>
-
-            <section class="list-section">
-                <h2>Mis fondos</h2>
-                <div class="cards" th:if="${!#lists.isEmpty(fondosResumen)}">
-                    <article class="card" th:each="resumen : ${fondosResumen}">
-                        <header>
-                            <h3 th:text="${resumen.nombre}"></h3>
-                            <span class="status status-active">Meta anual</span>
-                        </header>
-                        <p>Meta: <strong th:text="${#numbers.formatDecimal(resumen.montoAnual, 1, 'COMMA', 2, 'POINT')}"></strong></p>
-                        <p th:text="'Aportes ' + ${resumen.anioEvaluado} + ': ' + ${#numbers.formatDecimal(resumen.totalAportado, 1, 'COMMA', 2, 'POINT')}"></p>
-                        <div class="progress-bar">
-                            <div class="progress-fill"
-                                 th:with="avance=${resumen.porcentajeAvance.doubleValue()}"
-                                 th:style="|width: ${(avance > 100.0 ? 100.0 : avance)}%|"></div>
-                        </div>
-                        <p>Avance: <strong th:text="${#numbers.formatDecimal(resumen.porcentajeAvance, 1, 'COMMA', 2, 'POINT')} + '%'"></strong></p>
-
-                        <section class="sub-section">
-                            <h4>Registrar aporte</h4>
-                            <form th:action="@{'/fondos/' + ${resumen.id} + '/aportes'}" th:object="${aporteForm}" method="post" class="form-grid">
-                                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
-                                <label>
-                                    Anio
-                                    <input type="number" min="2000" max="2100" th:field="*{anio}" required>
-                                    <span class="error" th:if="${#fields.hasErrors('anio')}" th:errors="*{anio}"></span>
-                                </label>
-                                <label>
-                                    Mes
-                                    <input type="number" min="1" max="12" th:field="*{mes}" required>
-                                    <span class="error" th:if="${#fields.hasErrors('mes')}" th:errors="*{mes}"></span>
-                                </label>
-                                <label>
-                                    Monto
-                                    <input type="number" step="0.01" min="0.01" th:field="*{monto}" required>
-                                    <span class="error" th:if="${#fields.hasErrors('monto')}" th:errors="*{monto}"></span>
-                                </label>
-                                <div class="form-actions">
-                                    <button type="submit">Registrar</button>
-                                </div>
-                            </form>
-                        </section>
-
-                        <section class="sub-section">
-                            <h4>Historial de aportes</h4>
-                            <ul class="simple-list" th:if="${!#lists.isEmpty(registrosPorFondo[resumen.id])}">
-                                <li th:each="registro : ${registrosPorFondo[resumen.id]}"
-                                    th:text="${registro.mes} + '/' + ${registro.anio} + ' — ' + #numbers.formatDecimal(registro.montoAportado, 1, 'COMMA', 2, 'POINT')"></li>
-                            </ul>
-                            <p th:if="${#lists.isEmpty(registrosPorFondo[resumen.id])}">Aún no hay aportes registrados.</p>
-                        </section>
-
-                        <div class="card-actions">
-                            <form th:action="@{'/fondos/' + ${resumen.id} + '/eliminar'}" method="post"
-                                  onsubmit="return confirm('¿Eliminar fondo?');">
-                                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
-                                <button type="submit" class="danger">Eliminar</button>
-                            </form>
-                        </div>
-                    </article>
+            <!-- Header: + / lapiz / saldo + chip de divisa -->
+            <div class="txn-header">
+                <div class="header-actions">
+                    <button class="btn-icon" id="btnNuevo"
+                            onclick="abrirModalNuevo()" title="Nueva bolsa">+</button>
+                    <button class="btn-icon" id="btnEditar"
+                            th:disabled="${#lists.isEmpty(fondos)}"
+                            onclick="toggleEditMode()" title="Eliminar bolsas">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24"
+                             fill="none" stroke="currentColor" stroke-width="2.2"
+                             stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                        </svg>
+                    </button>
                 </div>
-                <p th:if="${#lists.isEmpty(fondosResumen)}">Aún no has creado fondos de ahorro.</p>
-            </section>
+                <div class="header-balance">
+                    <div class="balance-info">
+                        <span class="balance-account-name" th:text="${cuentaActivaNombre}"></span>
+                        <div class="balance-amount">
+                            <span class="balance-symbol" th:text="${simboloMoneda}">$</span>
+                            <span class="balance-number"
+                                  th:text="${#numbers.formatDecimal(saldoTotal != null ? saldoTotal : 0, 1, 'COMMA', 2, 'POINT')}">0,00</span>
+                        </div>
+                    </div>
+                    <span class="balance-moneda" th:text="${monedaActual}">COP</span>
+                </div>
+            </div>
+
+            <!-- Dos pills: temporalidad Anual + filtro por bolsa -->
+            <div class="txn-summary">
+
+                <div class="summary-pill pill-period">
+                    <button type="button" class="pill-trigger" style="cursor:default">
+                        <div class="pill-content">
+                            <span class="pill-label">Periodo</span>
+                            <span class="pill-summary">
+                                <span class="pill-mini pill-mini-count">Anual</span>
+                            </span>
+                        </div>
+                    </button>
+                </div>
+
+                <div class="summary-pill pill-filter" id="pillFiltroFondo">
+                    <button type="button" class="pill-trigger" onclick="toggleFondoDropdown()">
+                        <div class="pill-content">
+                            <span class="pill-label" id="lblFiltroFondo">Todos</span>
+                            <span class="pill-summary">
+                                <span class="pill-mini pill-mini-count">
+                                    <span th:text="${#lists.size(fondos)}">0</span> bolsas
+                                </span>
+                            </span>
+                        </div>
+                        <svg class="pill-caret" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+                             fill="none" stroke="currentColor" stroke-width="2.5"
+                             stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="6 9 12 15 18 9"/>
+                        </svg>
+                    </button>
+                    <div class="pill-menu" id="menuFiltroFondo">
+                        <button type="button" class="pill-option active"
+                                data-filtro="todos" data-label="Todos"
+                                onclick="setFiltroFondoFromBtn(this)">Todos</button>
+                        <div class="pill-divider" th:if="${!#lists.isEmpty(fondos)}"></div>
+                        <button type="button" class="pill-option"
+                                th:each="f : ${fondos}"
+                                th:attr="data-filtro=${'f:' + f.id},data-label=${f.nombre}"
+                                onclick="setFiltroFondoFromBtn(this)"
+                                th:text="${f.nombre}"></button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Lista de bolsas de ahorro -->
+            <div class="pres-section-header">
+                <h2 class="pres-section-title">Bolsas de Ahorro</h2>
+                <span class="pres-section-hint">Compartidas en todas tus cuentas</span>
+            </div>
+
+            <div class="pres-list" th:if="${!#lists.isEmpty(vistas)}">
+                <div th:each="fv : ${vistas}"
+                     class="pres-row pres-clickable fondo-row"
+                     th:classappend="${fv.metaAlcanzada} ? ' fondo-completo' : ''"
+                     th:attr="data-fid=${fv.fondo.id},
+                              data-nombre=${fv.fondo.nombre},
+                              data-color=${fv.fondo.color}"
+                     onclick="onFondoClick(this, event)">
+
+                    <span class="pres-dot" th:attr="data-color=${fv.fondo.color}"></span>
+
+                    <div class="pres-name">
+                        <span class="pres-name-main" th:text="${fv.fondo.nombre}"></span>
+                        <span class="pres-name-sub">
+                            <span th:if="${fv.metaAlcanzada}" class="fondo-meta-badge">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24"
+                                     fill="none" stroke="currentColor" stroke-width="3"
+                                     stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="20 6 9 17 4 12"/>
+                                </svg>
+                                Meta alcanzada
+                            </span>
+                            <span th:if="${!fv.metaAlcanzada}">Meta anual</span>
+                        </span>
+                    </div>
+
+                    <div class="pres-bar-wrap">
+                        <div class="pres-bar-track">
+                            <div class="pres-bar-fill fondo-bar-fill"
+                                 th:attr="data-color=${fv.fondo.color}"
+                                 th:style="'width:' + ${fv.pctBar} + '%'"></div>
+                        </div>
+                        <div class="pres-bar-meta">
+                            <span class="pres-bar-pct"
+                                  th:text="${#numbers.formatDecimal(fv.pct, 1, 0)} + '%'">0%</span>
+                            <span>
+                                <span th:text="${simboloMoneda}">$</span>
+                                <span th:text="${#numbers.formatDecimal(fv.aportadoConv, 1, 'COMMA', 2, 'POINT')}">0</span>
+                                <span style="opacity:0.5"> / </span>
+                                <span th:text="${simboloMoneda}">$</span>
+                                <span th:text="${#numbers.formatDecimal(fv.metaConv, 1, 'COMMA', 2, 'POINT')}">0</span>
+                            </span>
+                        </div>
+                        <div class="pres-bar-context" th:if="${fv.hayAporteEnCuentaActiva}">
+                            <span>Desde
+                                <strong th:text="${cuentaActivaNombre}">cuenta</strong>:
+                                <span th:text="${simboloMoneda}">$</span><span
+                                    th:text="${#numbers.formatDecimal(fv.aportadoCuentaActivaConv, 1, 'COMMA', 2, 'POINT')}">0</span>
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="pres-amount">
+                        <span th:text="${simboloMoneda}">$</span>
+                        <span th:text="${#numbers.formatDecimal(fv.metaConv, 1, 'COMMA', 2, 'POINT')}">0</span>
+                        <div class="pres-amount-small" th:text="${monedaActual}">COP</div>
+                    </div>
+
+                    <div class="pres-delete-action">
+                        <form th:action="@{'/fondos/' + ${fv.fondo.id} + '/eliminar'}" method="post"
+                              onsubmit="return confirm('¿Archivar esta bolsa? Los aportes históricos se conservarán.');">
+                            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                            <button type="submit" class="btn-pres-delete">×</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <div class="empty-pres" th:if="${#lists.isEmpty(vistas)}">
+                Aun no has creado bolsas de ahorro. Usa el botón <strong>+</strong> para empezar tu primera meta.
+            </div>
+
+            <!-- Stats: total bolsas | total aportado -->
+            <div class="pres-stats" th:if="${!#lists.isEmpty(vistas)}">
+                <div class="pres-stat">
+                    <span class="pres-stat-label">Total Bolsas</span>
+                    <span class="pres-stat-amount">
+                        <span th:text="${simboloMoneda}">$</span>
+                        <span th:text="${#numbers.formatDecimal(totalMetaConv, 1, 'COMMA', 2, 'POINT')}">0</span>
+                    </span>
+                </div>
+                <div class="pres-stat-divider"></div>
+                <div class="pres-stat">
+                    <span class="pres-stat-label">Total Aportado</span>
+                    <span class="pres-stat-amount">
+                        <span th:text="${simboloMoneda}">$</span>
+                        <span th:text="${#numbers.formatDecimal(totalAportadoConv, 1, 'COMMA', 2, 'POINT')}">0</span>
+                    </span>
+                </div>
+            </div>
+
+            <!-- Historial de aportes -->
+            <h2 class="pres-section-title">Historial de aportes</h2>
+
+            <div class="txn-timeline" id="timelineFondos">
+                <div th:each="entry : ${agrupadas}"
+                     class="date-group"
+                     th:attr="data-fecha=${#temporals.format(entry.key, 'yyyy-MM-dd')}">
+                    <div class="date-label">
+                        <span th:text="${#temporals.format(entry.key, 'dd/MM/yyyy')}"></span>
+                    </div>
+                    <div th:each="t : ${entry.value}"
+                         class="txn-row txn-gasto"
+                         th:attr="data-fid=${t.fondo != null ? t.fondo.id : ''}">
+                        <div class="txn-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                                 fill="none" stroke="currentColor" stroke-width="2.5"
+                                 stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="17" y1="7" x2="7" y2="17"/>
+                                <polyline points="17 17 7 17 7 7"/>
+                            </svg>
+                        </div>
+                        <div class="txn-info">
+                            <span class="txn-cat" th:text="${t.categoria}"></span>
+                            <small class="txn-time"
+                                   th:text="${t.fechaRegistro != null ? #temporals.format(t.fechaRegistro, 'HH:mm') : ''}"></small>
+                        </div>
+                        <div class="txn-ref-wrap">
+                            <!-- Icono de fondo (corazón estilo sidebar) -->
+                            <span class="txn-budget-icon" th:if="${t.fondo != null}"
+                                  th:attr="data-color=${t.fondo.color}">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24"
+                                     fill="none" stroke="currentColor" stroke-width="2.5"
+                                     stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>
+                                </svg>
+                            </span>
+                            <span class="txn-ref"
+                                  th:text="${'A ' + (t.fondo != null ? t.fondo.nombre : t.categoria)}"></span>
+                        </div>
+                        <span class="txn-amount amount-gasto"
+                              th:text="'-' + ${simboloMoneda} + ' ' + ${#numbers.formatDecimal(t.monto.multiply(tasaActual), 1, 'COMMA', 2, 'POINT')}">
+                        </span>
+                        <div></div>
+                    </div>
+                </div>
+                <div class="empty-msg" th:if="${agrupadas.isEmpty()}">
+                    Sin aportes registrados en la cuenta activa.
+                </div>
+            </div>
 
         </div>
     </div>
-
 </div>
+
+<!-- ====================================================
+     MODAL: Crear bolsa de ahorro
+     ==================================================== -->
+<div class="modal-overlay" id="modalOverlay">
+    <div class="modal-box" onclick="event.stopPropagation()">
+        <h3 class="modal-title">Nueva bolsa de ahorro</h3>
+
+        <form id="frmFondo" th:action="@{/fondos}" th:object="${formulario}" method="post"
+              autocomplete="off">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+            <input type="hidden" th:field="*{color}" id="campoColor">
+            <input type="hidden" th:field="*{nombre}" id="campoNombreHidden">
+
+            <div class="modal-fields">
+                <!-- Nombre -->
+                <label>
+                    Nombre de la bolsa
+                    <input type="text" id="campoNombre"
+                           list="categoriasFondos" placeholder="Ej: Vacaciones, Vehículo..." maxlength="50" required
+                           autocomplete="off" name="fondo_nombre_input"
+                           oninput="document.getElementById('campoNombreHidden').value = this.value">
+                    <datalist id="categoriasFondos">
+                        <option th:each="c : ${categoriasSugeridas}" th:value="${c}"></option>
+                    </datalist>
+                    <span class="field-error"
+                          th:if="${#fields.hasErrors('nombre')}"
+                          th:errors="*{nombre}"></span>
+                </label>
+
+                <!-- Meta anual en COP -->
+                <label>
+                    Meta anual <small style="color:rgba(255,255,255,0.4);font-weight:400">(en COP)</small>
+                    <div class="input-prefix">
+                        <span>COP&nbsp;$</span>
+                        <input type="number" th:field="*{montoAnual}"
+                               step="1" min="1" placeholder="0" required>
+                    </div>
+                    <span class="field-error"
+                          th:if="${#fields.hasErrors('montoAnual')}"
+                          th:errors="*{montoAnual}"></span>
+                </label>
+
+                <!-- Color identificador -->
+                <label>
+                    Color
+                    <div class="color-picker" id="colorPicker">
+                        <button type="button" class="color-swatch active" data-color="#5B8DEF" style="background:#5B8DEF"></button>
+                        <button type="button" class="color-swatch" data-color="#E74C3C" style="background:#E74C3C"></button>
+                        <button type="button" class="color-swatch" data-color="#E91E63" style="background:#E91E63"></button>
+                        <button type="button" class="color-swatch" data-color="#9B59B6" style="background:#9B59B6"></button>
+                        <button type="button" class="color-swatch" data-color="#C4985A" style="background:#C4985A"></button>
+                        <button type="button" class="color-swatch" data-color="#27AE60" style="background:#27AE60"></button>
+                        <button type="button" class="color-swatch" data-color="#16A085" style="background:#16A085"></button>
+                        <button type="button" class="color-swatch" data-color="#F39C12" style="background:#F39C12"></button>
+                    </div>
+                </label>
+            </div>
+
+            <div class="modal-actions">
+                <button type="button" class="btn-modal-cancel" onclick="cerrarModal()">Cancelar</button>
+                <button type="submit" class="btn-modal-save">Guardar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ====================================================
+     MODAL: Aportar a una bolsa (al clickear)
+     ==================================================== -->
+<div class="modal-overlay" id="modalAporteOverlay">
+    <div class="modal-box" onclick="event.stopPropagation()">
+
+        <h3 class="modal-title">
+            Aportar a
+            <span class="pres-target">
+                <span class="pres-target-dot" id="aporteDot"></span>
+                <span id="aporteNombre"></span>
+            </span>
+        </h3>
+
+        <form id="frmAporte" th:action="@{/transacciones}" method="post" autocomplete="off">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+            <input type="hidden" name="tipo" value="GASTO">
+            <input type="hidden" name="fondoId" id="aporteFondoId">
+            <input type="hidden" name="categoria" id="aporteCategoria">
+            <input type="hidden" name="redirect" value="/fondos">
+
+            <div class="modal-fields">
+                <label>
+                    Monto <small style="color:rgba(255,255,255,0.4);font-weight:400">(en COP)</small>
+                    <div class="input-prefix">
+                        <span>COP&nbsp;$</span>
+                        <input type="number" name="monto" id="aporteMonto"
+                               step="0.01" min="0.01" placeholder="0.00" required>
+                    </div>
+                </label>
+
+                <div class="advanced-toggle">
+                    <button type="button" class="advanced-link" onclick="toggleAporteAdvanced()">
+                        <span id="aporteCaret">▸</span> Más opciones
+                    </button>
+                </div>
+
+                <div id="aporteAdvanced" class="advanced-fields" style="display:none">
+                    <label>
+                        Fecha
+                        <input type="date" name="fecha" id="aporteFecha" disabled
+                               oninput="this.disabled = !this.value">
+                    </label>
+                    <label>
+                        Descripción
+                        <input type="text" name="descripcion"
+                               placeholder="Opcional" maxlength="100">
+                    </label>
+                </div>
+            </div>
+
+            <div class="account-confirm">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+                     fill="none" stroke="currentColor" stroke-width="2"
+                     stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="2" y="5" width="20" height="14" rx="2"/>
+                    <line x1="2" y1="10" x2="22" y2="10"/>
+                </svg>
+                <span>Aporte saldrá de
+                    <strong th:text="${cuentaActivaNombre != null ? cuentaActivaNombre : 'Sin cuenta activa'}"></strong>
+                </span>
+            </div>
+
+            <div class="modal-actions">
+                <button type="button" class="btn-modal-cancel" onclick="cerrarModalAporte()">Cancelar</button>
+                <button type="submit" class="btn-modal-save">Aportar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script th:inline="javascript">
+    var editMode = false;
+    var formConErrores = /*[[${formConErrores ?: false}]]*/ false;
+
+    function abrirModalNuevo() {
+        var hidden = document.getElementById('campoNombreHidden');
+        var visible = document.getElementById('campoNombre');
+        if (hidden && visible) visible.value = hidden.value || '';
+        document.getElementById('modalOverlay').classList.add('active');
+    }
+
+    function cerrarModal() {
+        document.getElementById('modalOverlay').classList.remove('active');
+    }
+
+    document.getElementById('modalOverlay').addEventListener('click', function(e) {
+        if (e.target === this) cerrarModal();
+    });
+
+    // Color picker
+    document.getElementById('colorPicker').addEventListener('click', function(e) {
+        var btn = e.target.closest('.color-swatch');
+        if (!btn) return;
+        document.querySelectorAll('#colorPicker .color-swatch').forEach(function(s) {
+            s.classList.remove('active');
+        });
+        btn.classList.add('active');
+        document.getElementById('campoColor').value = btn.getAttribute('data-color');
+    });
+
+    /* ─────────────────────────────────────────────
+       MODAL: Aportar a un fondo (click en bolsa)
+       ───────────────────────────────────────────── */
+    function onFondoClick(row, event) {
+        if (editMode) return;
+        if (event && event.target && event.target.closest('.pres-delete-action')) return;
+
+        var fid    = row.getAttribute('data-fid');
+        var nombre = row.getAttribute('data-nombre');
+        var color  = row.getAttribute('data-color');
+
+        document.getElementById('aporteFondoId').value = fid;
+        document.getElementById('aporteCategoria').value = 'Ahorro: ' + nombre;
+        document.getElementById('aporteNombre').textContent = nombre;
+        document.getElementById('aporteDot').style.background = color;
+
+        var inputMonto = document.getElementById('aporteMonto');
+        inputMonto.value = '';
+        setTimeout(function() { inputMonto.focus(); }, 50);
+
+        document.getElementById('aporteAdvanced').style.display = 'none';
+        document.getElementById('aporteCaret').textContent = '▸';
+        var fecha = document.getElementById('aporteFecha');
+        fecha.value = ''; fecha.disabled = true;
+
+        document.getElementById('modalAporteOverlay').classList.add('active');
+    }
+
+    function cerrarModalAporte() {
+        document.getElementById('modalAporteOverlay').classList.remove('active');
+    }
+
+    function toggleAporteAdvanced() {
+        var box = document.getElementById('aporteAdvanced');
+        var caret = document.getElementById('aporteCaret');
+        var visible = box.style.display === 'block';
+        box.style.display = visible ? 'none' : 'block';
+        caret.textContent = visible ? '▸' : '▾';
+    }
+
+    document.getElementById('modalAporteOverlay').addEventListener('click', function(e) {
+        if (e.target === this) cerrarModalAporte();
+    });
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            cerrarModal();
+            cerrarModalAporte();
+        }
+    });
+
+    // Modo edicion
+    function toggleEditMode() {
+        editMode = !editMode;
+        document.body.classList.toggle('edit-mode', editMode);
+        document.getElementById('btnEditar').classList.toggle('active', editMode);
+        document.querySelectorAll('.pres-delete-action').forEach(function(el) {
+            el.classList.toggle('visible', editMode);
+        });
+    }
+
+    /* ─────────────────────────────────────────────
+       Dropdown filtro por fondo
+       ───────────────────────────────────────────── */
+    function toggleFondoDropdown() {
+        document.getElementById('menuFiltroFondo').classList.toggle('open');
+    }
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('#pillFiltroFondo')) {
+            document.getElementById('menuFiltroFondo').classList.remove('open');
+        }
+    });
+
+    function setFiltroFondoFromBtn(btn) {
+        setFiltroFondo(btn.getAttribute('data-filtro'), btn.getAttribute('data-label'));
+    }
+
+    function setFiltroFondo(filtro, label) {
+        document.getElementById('lblFiltroFondo').textContent = label;
+        document.querySelectorAll('#menuFiltroFondo .pill-option').forEach(function(opt) {
+            opt.classList.toggle('active', opt.getAttribute('data-filtro') === filtro);
+        });
+        document.getElementById('menuFiltroFondo').classList.remove('open');
+
+        var idTarget = filtro.indexOf('f:') === 0 ? filtro.substring(2) : null;
+
+        // Filtrar lista de fondos
+        document.querySelectorAll('.fondo-row').forEach(function(row) {
+            row.style.display = (!idTarget || row.getAttribute('data-fid') === idTarget) ? '' : 'none';
+        });
+
+        // Filtrar historial
+        document.querySelectorAll('#timelineFondos .date-group').forEach(function(grupo) {
+            var algunaFila = false;
+            grupo.querySelectorAll('.txn-row').forEach(function(r) {
+                var fid = r.getAttribute('data-fid');
+                var visible = !idTarget || fid === idTarget;
+                r.style.display = visible ? '' : 'none';
+                if (visible) algunaFila = true;
+            });
+            grupo.style.display = algunaFila ? '' : 'none';
+        });
+    }
+
+    /* ─────────────────────────────────────────────
+       Aplicar color de las barras (mismo color del fondo)
+       ───────────────────────────────────────────── */
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('.fondo-bar-fill[data-color]').forEach(function(el) {
+            var color = el.getAttribute('data-color');
+            if (color) el.style.background = color;
+        });
+    });
+
+    if (formConErrores) abrirModalNuevo();
+</script>
+
 </body>
 </html>

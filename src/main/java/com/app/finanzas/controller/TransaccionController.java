@@ -5,6 +5,7 @@ import com.app.finanzas.entity.TipoTransaccion;
 import com.app.finanzas.entity.Transaccion;
 import com.app.finanzas.entity.Usuario;
 import com.app.finanzas.service.CuentaService;
+import com.app.finanzas.service.FondoService;
 import com.app.finanzas.service.MonedaService;
 import com.app.finanzas.service.PresupuestoService;
 import com.app.finanzas.service.TransaccionService;
@@ -48,17 +49,20 @@ public class TransaccionController {
     private final CuentaService cuentaService;
     private final UsuarioService usuarioService;
     private final PresupuestoService presupuestoService;
+    private final FondoService fondoService;
     private final MonedaService monedaService;
 
     public TransaccionController(TransaccionService transaccionService,
                                  CuentaService cuentaService,
                                  UsuarioService usuarioService,
                                  PresupuestoService presupuestoService,
+                                 FondoService fondoService,
                                  MonedaService monedaService) {
         this.transaccionService = transaccionService;
         this.cuentaService = cuentaService;
         this.usuarioService = usuarioService;
         this.presupuestoService = presupuestoService;
+        this.fondoService = fondoService;
         this.monedaService = monedaService;
     }
 
@@ -81,6 +85,7 @@ public class TransaccionController {
     public String crear(@Valid Transaccion transaccion,
                         BindingResult bindingResult,
                         @RequestParam(value = "presupuestoId", required = false) String presupuestoIdStr,
+                        @RequestParam(value = "fondoId", required = false) String fondoIdStr,
                         @RequestParam(value = "redirect", required = false) String redirect,
                         RedirectAttributes redirectAttributes,
                         Model model,
@@ -140,6 +145,24 @@ public class TransaccionController {
             } catch (NumberFormatException ignored) { }
         }
 
+        // Vincular fondo si fue seleccionado y pertenece al usuario (aporte a bolsa de ahorro)
+        if (fondoIdStr != null && !fondoIdStr.isBlank()) {
+            try {
+                Integer fondoId = Integer.parseInt(fondoIdStr);
+                fondoService.listarActivosPorUsuario(usuario).stream()
+                        .filter(f -> f.getId().equals(fondoId))
+                        .findFirst()
+                        .ifPresent(f -> {
+                            transaccion.setFondo(f);
+                            // Forzar tipo GASTO (un aporte es un gasto contra la cuenta activa)
+                            transaccion.setTipo(TipoTransaccion.GASTO);
+                            if (transaccion.getCategoria() == null || transaccion.getCategoria().isBlank()) {
+                                transaccion.setCategoria("Ahorro: " + f.getNombre());
+                            }
+                        });
+            } catch (NumberFormatException ignored) { }
+        }
+
         // Fallback de categoria si quedo vacia
         if (transaccion.getCategoria() == null || transaccion.getCategoria().isBlank()) {
             transaccion.setCategoria(transaccion.getTipo() == TipoTransaccion.INGRESO ? "Ingreso" : "Gasto general");
@@ -155,6 +178,7 @@ public class TransaccionController {
         }
         // Whitelist de redirects validos (evita open-redirect)
         if (redirect != null && (redirect.equals("/presupuestos")
+                || redirect.equals("/fondos")
                 || redirect.equals("/dashboard")
                 || redirect.equals("/transacciones"))) {
             return "redirect:" + redirect;

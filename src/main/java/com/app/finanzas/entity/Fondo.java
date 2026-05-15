@@ -42,6 +42,17 @@ public class Fondo {
     @Column(name = "monto_anual", nullable = false, precision = 12, scale = 2)
     private BigDecimal montoAnual;
 
+    @Size(max = 20)
+    @Column(length = 20)
+    private String color = "#5B8DEF";
+
+    @Size(max = 200)
+    @Column(length = 200)
+    private String descripcion;
+
+    @Column(nullable = false)
+    private boolean activo = true;
+
     @OneToMany(mappedBy = "fondo", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<RegistroFondo> registros = new LinkedHashSet<>();
 
@@ -76,6 +87,15 @@ public class Fondo {
     public void setMontoAnual(BigDecimal montoAnual) {
         this.montoAnual = montoAnual;
     }
+
+    public String getColor() { return color; }
+    public void setColor(String color) { this.color = color; }
+
+    public String getDescripcion() { return descripcion; }
+    public void setDescripcion(String descripcion) { this.descripcion = descripcion; }
+
+    public boolean isActivo() { return activo; }
+    public void setActivo(boolean activo) { this.activo = activo; }
 
     public Set<RegistroFondo> getRegistros() {
         return registros;

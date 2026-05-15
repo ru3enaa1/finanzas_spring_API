@@ -52,6 +52,15 @@ Diseñada para usuarios hispanohablantes — sin tecnicismos contables, sin curv
 - Pre-llenado automático de montos para pagos recurrentes
 - Contexto dual: ve el límite global Y cuánto aporta tu cuenta activa (estilo YNAB)
 
+### 🎯 Fondos de ahorro (bolsas)
+- Define metas anuales para Vacaciones, Vehículo, Casa propia o lo que necesites
+- Cada bolsa con su color único — barras horizontales con progreso visual hacia la meta
+- Click directo para aportar a la bolsa sin salir del módulo
+- Aportes generan transacciones reales (el saldo baja, refleja realidad económica)
+- Indicador "Meta alcanzada" con glow dorado cuando llegas al 100%
+- Archivado en lugar de borrado: los aportes históricos se preservan
+- Contexto dual igual que presupuestos: ves el total aportado Y cuánto desde la cuenta activa
+
 ### 🌍 Multi-divisa global
 - Cambia entre **COP, USD y EUR** desde un solo chip en el topbar
 - Todos los saldos, transacciones y presupuestos se reconvierten al instante
@@ -193,15 +202,15 @@ finanzas_spring_API/
 
 ## Roadmap
 
-Esta versión 2.0 establece las bases sólidas del producto: cuentas, transacciones, presupuestos y un sistema multi-divisa robusto.
+Esta versión establece las bases del producto: cuentas, transacciones, presupuestos, fondos de ahorro y un sistema multi-divisa robusto.
 
 Las próximas iteraciones traerán capacidades pensadas para ampliar el alcance del producto:
 
-- 🎯 **Fondos de ahorro** con metas anuales y seguimiento de progreso
-- 📈 **Módulo de informes** descargables (PDF / Excel / CSV)
-- 🔔 **Sistema de alertas y recordatorios** automáticos
+- 📈 **Módulo de informes** descargables (PDF / Excel / CSV) con histórico mensual y anual
+- 🔔 **Sistema de alertas y recordatorios** automáticos por umbrales de presupuesto y metas alcanzadas
 - 🏢 **Modo empresa** para pequeñas y medianas organizaciones
 - 🤖 **Asistente IA financiero** contextualizado al estado real del usuario
+- 📱 **App móvil nativa** complementaria
 
 > Cada función se desarrolla en una rama feature separada y se prueba aisladamente antes de integrarse a `main`. La rama `main` mantiene siempre la versión estable y desplegable.
 

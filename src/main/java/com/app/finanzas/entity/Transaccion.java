@@ -64,6 +64,10 @@ public class Transaccion {
     @JoinColumn(name = "presupuesto_id")
     private Presupuesto presupuesto;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "fondo_id")
+    private Fondo fondo;
+
     public Integer getId() {
         return id;
     }
@@ -143,4 +147,7 @@ public class Transaccion {
     public void setPresupuesto(Presupuesto presupuesto) {
         this.presupuesto = presupuesto;
     }
+
+    public Fondo getFondo() { return fondo; }
+    public void setFondo(Fondo fondo) { this.fondo = fondo; }
 }

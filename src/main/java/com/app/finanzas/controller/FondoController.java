@@ -1,13 +1,20 @@
 package com.app.finanzas.controller;
 
-import com.app.finanzas.dto.FondoResumen;
-import com.app.finanzas.dto.RegistroFondoForm;
+import com.app.finanzas.entity.Cuenta;
 import com.app.finanzas.entity.Fondo;
-import com.app.finanzas.entity.RegistroFondo;
+import com.app.finanzas.entity.TipoTransaccion;
+import com.app.finanzas.entity.Transaccion;
 import com.app.finanzas.entity.Usuario;
+import com.app.finanzas.repository.TransaccionRepository;
+import com.app.finanzas.service.CuentaService;
 import com.app.finanzas.service.FondoService;
+import com.app.finanzas.service.MonedaService;
+import com.app.finanzas.service.TransaccionService;
 import com.app.finanzas.service.UsuarioService;
+import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
@@ -19,34 +26,52 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
-import java.time.YearMonth;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 @Controller
 @RequestMapping("/fondos")
 public class FondoController {
 
-    private final FondoService fondoService;
-    private final UsuarioService usuarioService;
+    private static final Logger LOGGER = LoggerFactory.getLogger(FondoController.class);
 
-    public FondoController(FondoService fondoService, UsuarioService usuarioService) {
+    private static final List<String> CATEGORIAS_SUGERIDAS = List.of(
+            "Vacaciones", "Vehículo", "Casa propia", "Educación",
+            "Emergencias", "Inversiones", "Boda", "Tecnología", "Otros"
+    );
+
+    private final FondoService fondoService;
+    private final TransaccionService transaccionService;
+    private final TransaccionRepository transaccionRepository;
+    private final CuentaService cuentaService;
+    private final UsuarioService usuarioService;
+    private final MonedaService monedaService;
+
+    public FondoController(FondoService fondoService,
+                           TransaccionService transaccionService,
+                           TransaccionRepository transaccionRepository,
+                           CuentaService cuentaService,
+                           UsuarioService usuarioService,
+                           MonedaService monedaService) {
         this.fondoService = fondoService;
+        this.transaccionService = transaccionService;
+        this.transaccionRepository = transaccionRepository;
+        this.cuentaService = cuentaService;
         this.usuarioService = usuarioService;
+        this.monedaService = monedaService;
     }
 
     @GetMapping
-    public String listar(Model model) {
+    public String listar(Model model, HttpSession session) {
         Usuario usuario = obtenerUsuarioAutenticado();
-        if (!model.containsAttribute("fondo")) {
-            model.addAttribute("fondo", new Fondo());
-        }
-        if (!model.containsAttribute("aporteForm")) {
-            model.addAttribute("aporteForm", crearFormularioAportePorDefecto());
-        }
-        prepararModeloFondos(model, usuario);
+        Fondo nuevo = new Fondo();
+        prepararModelo(model, usuario, nuevo, session);
         return "fondos/lista";
     }
 
@@ -54,19 +79,32 @@ public class FondoController {
     public String crear(@Valid Fondo fondo,
                         BindingResult bindingResult,
                         RedirectAttributes redirectAttributes,
-                        Model model) {
+                        Model model,
+                        HttpSession session) {
         Usuario usuario = obtenerUsuarioAutenticado();
+
         if (fondoService.existeNombreParaUsuario(usuario, fondo.getNombre())) {
-            bindingResult.rejectValue("nombre", "fondo.nombre.duplicado", "Ya existe un fondo con ese nombre");
+            bindingResult.rejectValue("nombre", "fondo.nombre.duplicado",
+                    "Ya tienes una bolsa con ese nombre");
         }
+
         if (bindingResult.hasErrors()) {
-            prepararModeloFondos(model, usuario);
-            model.addAttribute("aporteForm", crearFormularioAportePorDefecto());
+            LOGGER.warn("Errores al crear fondo: {}", bindingResult.getAllErrors());
+            prepararModelo(model, usuario, fondo, session);
+            model.addAttribute("formConErrores", true);
             return "fondos/lista";
         }
-        fondo.setUsuario(usuario);
-        fondoService.crear(fondo);
-        redirectAttributes.addFlashAttribute("mensajeExito", "Fondo creado correctamente");
+
+        try {
+            fondo.setUsuario(usuario);
+            fondo.setActivo(true);
+            fondoService.crear(fondo);
+            redirectAttributes.addFlashAttribute("mensajeExito", "Bolsa de ahorro creada");
+        } catch (RuntimeException ex) {
+            LOGGER.error("Fallo al crear fondo", ex);
+            redirectAttributes.addFlashAttribute("mensajeError",
+                    "No se pudo crear la bolsa: " + ex.getMessage());
+        }
         return "redirect:/fondos";
     }
 
@@ -75,92 +113,114 @@ public class FondoController {
                              @Valid Fondo fondo,
                              BindingResult bindingResult,
                              RedirectAttributes redirectAttributes,
-                             Model model) {
+                             Model model,
+                             HttpSession session) {
         Usuario usuario = obtenerUsuarioAutenticado();
-        Fondo existente = fondoService.buscarPorIdYUsuario(id, usuario)
-                .orElseThrow(() -> new IllegalArgumentException("Fondo no encontrado"));
-        if (!existente.getNombre().equalsIgnoreCase(fondo.getNombre())
-                && fondoService.existeNombreParaUsuario(usuario, fondo.getNombre())) {
-            bindingResult.rejectValue("nombre", "fondo.nombre.duplicado", "Ya existe un fondo con ese nombre");
-        }
         if (bindingResult.hasErrors()) {
             fondo.setId(id);
-            prepararModeloFondos(model, usuario);
-            model.addAttribute("fondo", fondo);
-            model.addAttribute("aporteForm", crearFormularioAportePorDefecto());
+            prepararModelo(model, usuario, fondo, session);
+            model.addAttribute("formConErrores", true);
             return "fondos/lista";
         }
-        fondo.setId(id);
-        fondo.setUsuario(usuario);
-        fondoService.actualizar(fondo);
-        redirectAttributes.addFlashAttribute("mensajeExito", "Fondo actualizado");
+        fondoService.buscarPorIdYUsuario(id, usuario).ifPresent(existente -> {
+            existente.setNombre(fondo.getNombre());
+            existente.setMontoAnual(fondo.getMontoAnual());
+            if (fondo.getColor() != null && !fondo.getColor().isBlank()) {
+                existente.setColor(fondo.getColor());
+            }
+            existente.setDescripcion(fondo.getDescripcion());
+            fondoService.actualizar(existente);
+        });
+        redirectAttributes.addFlashAttribute("mensajeExito", "Bolsa actualizada");
         return "redirect:/fondos";
     }
 
     @PostMapping("/{id}/eliminar")
     public String eliminar(@PathVariable Integer id, RedirectAttributes redirectAttributes) {
         Usuario usuario = obtenerUsuarioAutenticado();
-        Fondo fondo = fondoService.buscarPorIdYUsuario(id, usuario)
-                .orElseThrow(() -> new IllegalArgumentException("Fondo no encontrado"));
-        fondoService.eliminar(fondo);
-        redirectAttributes.addFlashAttribute("mensajeExito", "Fondo eliminado");
+        // Archivar: preservamos aportes historicos como transacciones reales
+        fondoService.buscarPorIdYUsuario(id, usuario).ifPresent(f -> {
+            f.setActivo(false);
+            fondoService.actualizar(f);
+        });
+        redirectAttributes.addFlashAttribute("mensajeExito", "Bolsa archivada");
         return "redirect:/fondos";
     }
 
-    @PostMapping("/{id}/aportes")
-    public String registrarAporte(@PathVariable Integer id,
-                                   @Valid RegistroFondoForm aporteForm,
-                                   BindingResult bindingResult,
-                                   RedirectAttributes redirectAttributes,
-                                   Model model) {
-        Usuario usuario = obtenerUsuarioAutenticado();
-        Fondo fondo = fondoService.buscarPorIdYUsuario(id, usuario)
-                .orElseThrow(() -> new IllegalArgumentException("Fondo no encontrado"));
+    private void prepararModelo(Model model, Usuario usuario, Fondo formulario, HttpSession session) {
+        List<Fondo> fondos = fondoService.listarActivosPorUsuario(usuario);
 
-        if (bindingResult.hasErrors()) {
-            prepararModeloFondos(model, usuario);
-            model.addAttribute("fondo", new Fondo());
-            model.addAttribute("aporteForm", aporteForm);
-            return "fondos/lista";
-        }
-        fondoService.registrarAporte(fondo, aporteForm.getAnio(), aporteForm.getMes(), aporteForm.getMonto());
-        redirectAttributes.addFlashAttribute("mensajeExito", "Aporte registrado");
-        return "redirect:/fondos";
-    }
+        String moneda = monedaService.normalizar((String) session.getAttribute("monedaPreferida"));
+        BigDecimal tasa = monedaService.tasa(moneda);
 
-    private void prepararModeloFondos(Model model, Usuario usuario) {
-        List<Fondo> fondos = fondoService.listarPorUsuario(usuario);
-        YearMonth periodoActual = YearMonth.now();
-        int anioActual = periodoActual.getYear();
+        // Cuenta activa + saldo
+        Integer activaId = (Integer) session.getAttribute("cuentaActivaId");
+        BigDecimal saldoCuentaActiva = cuentaService.listarPorUsuario(usuario).stream()
+                .filter(c -> c.getId().equals(activaId))
+                .map(Cuenta::getSaldo)
+                .findFirst()
+                .orElse(BigDecimal.ZERO);
+        BigDecimal saldoConvertido = monedaService.convertir(saldoCuentaActiva, moneda);
 
-        List<FondoResumen> resumenes = fondos.stream()
-                .map(fondo -> new FondoResumen(
-                        fondo.getId(),
-                        fondo.getNombre(),
-                        fondo.getMontoAnual(),
-                        fondoService.calcularTotalAportado(fondo, anioActual),
-                        fondoService.calcularPorcentajeAvance(fondo, anioActual),
-                        anioActual
-                ))
-                .collect(Collectors.toList());
+        // Transacciones de aporte de la cuenta activa (para historial filtrable)
+        List<Transaccion> aportesCuentaActiva = activaId != null
+                ? transaccionService.listarPorCuenta(activaId).stream()
+                        .filter(t -> t.getFondo() != null)
+                        .filter(t -> t.getTipo() == TipoTransaccion.GASTO)
+                        .toList()
+                : new ArrayList<>();
 
-        Map<Integer, List<RegistroFondo>> registrosPorFondo = new LinkedHashMap<>();
-        for (Fondo fondo : fondos) {
-            registrosPorFondo.put(fondo.getId(), fondoService.listarRegistros(fondo));
+        // Aporte de la cuenta activa por fondo (contexto dual estilo YNAB)
+        Map<Integer, BigDecimal> aportadoEnCuentaActiva = new HashMap<>();
+        for (Transaccion t : aportesCuentaActiva) {
+            aportadoEnCuentaActiva.merge(t.getFondo().getId(), t.getMonto(), BigDecimal::add);
         }
 
-        model.addAttribute("fondosResumen", resumenes);
-        model.addAttribute("registrosPorFondo", registrosPorFondo);
-        model.addAttribute("anioActual", anioActual);
-        model.addAttribute("usuarioActual", usuario.getNombre() != null ? usuario.getNombre() : usuario.getCorreo());
-    }
+        // Pre-calcular vista de cada fondo
+        List<FondoVista> vistas = new ArrayList<>();
+        BigDecimal totalMeta = BigDecimal.ZERO;
+        BigDecimal totalAportado = BigDecimal.ZERO;
 
-    private RegistroFondoForm crearFormularioAportePorDefecto() {
-        RegistroFondoForm formulario = new RegistroFondoForm();
-        YearMonth ahora = YearMonth.now();
-        formulario.setAnio(ahora.getYear());
-        formulario.setMes(ahora.getMonthValue());
-        return formulario;
+        for (Fondo f : fondos) {
+            BigDecimal aportado = transaccionRepository.sumarAportadoPorFondo(f.getId());
+            if (aportado == null) aportado = BigDecimal.ZERO;
+            BigDecimal meta = f.getMontoAnual() != null ? f.getMontoAnual() : BigDecimal.ZERO;
+
+            double pct = 0.0;
+            if (meta.compareTo(BigDecimal.ZERO) > 0) {
+                pct = aportado.doubleValue() / meta.doubleValue() * 100.0;
+            }
+            double pctBar = Math.min(pct, 100.0);
+            boolean metaAlcanzada = pct >= 100.0;
+
+            BigDecimal aportadoConv = aportado.multiply(tasa).setScale(2, RoundingMode.HALF_UP);
+            BigDecimal metaConv = meta.multiply(tasa).setScale(2, RoundingMode.HALF_UP);
+            BigDecimal aportadoEnCuentaConv = monedaService.convertir(
+                    aportadoEnCuentaActiva.getOrDefault(f.getId(), BigDecimal.ZERO), moneda);
+
+            vistas.add(new FondoVista(f, aportado, meta, aportadoConv, metaConv,
+                    aportadoEnCuentaConv, pct, pctBar, metaAlcanzada));
+            totalMeta = totalMeta.add(meta);
+            totalAportado = totalAportado.add(aportado);
+        }
+
+        BigDecimal totalMetaConv = totalMeta.multiply(tasa).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal totalAportadoConv = totalAportado.multiply(tasa).setScale(2, RoundingMode.HALF_UP);
+
+        // Historial agrupado por fecha (solo aportes de la cuenta activa)
+        Map<LocalDate, List<Transaccion>> agrupadas = new LinkedHashMap<>();
+        for (Transaccion t : aportesCuentaActiva) {
+            agrupadas.computeIfAbsent(t.getFecha(), k -> new ArrayList<>()).add(t);
+        }
+
+        model.addAttribute("fondos", fondos);
+        model.addAttribute("vistas", vistas);
+        model.addAttribute("totalMetaConv", totalMetaConv);
+        model.addAttribute("totalAportadoConv", totalAportadoConv);
+        model.addAttribute("saldoTotal", saldoConvertido);
+        model.addAttribute("formulario", formulario);
+        model.addAttribute("categoriasSugeridas", CATEGORIAS_SUGERIDAS);
+        model.addAttribute("agrupadas", agrupadas);
     }
 
     private Usuario obtenerUsuarioAutenticado() {
@@ -171,5 +231,49 @@ public class FondoController {
         return usuarioService.buscarPorCorreo(authentication.getName())
                 .orElseThrow(() -> new IllegalStateException("Usuario no encontrado"));
     }
-}
 
+    /**
+     * DTO para la vista: fondo + cifras precalculadas (aportado global, en cuenta activa,
+     * %, meta alcanzada, valores convertidos a moneda visible).
+     */
+    public static class FondoVista {
+        private final Fondo fondo;
+        private final BigDecimal aportado;
+        private final BigDecimal meta;
+        private final BigDecimal aportadoConv;
+        private final BigDecimal metaConv;
+        private final BigDecimal aportadoCuentaActivaConv;
+        private final boolean hayAporteEnCuentaActiva;
+        private final double pct;
+        private final double pctBar;
+        private final boolean metaAlcanzada;
+
+        public FondoVista(Fondo fondo, BigDecimal aportado, BigDecimal meta,
+                          BigDecimal aportadoConv, BigDecimal metaConv,
+                          BigDecimal aportadoCuentaActivaConv,
+                          double pct, double pctBar, boolean metaAlcanzada) {
+            this.fondo = fondo;
+            this.aportado = aportado;
+            this.meta = meta;
+            this.aportadoConv = aportadoConv;
+            this.metaConv = metaConv;
+            this.aportadoCuentaActivaConv = aportadoCuentaActivaConv;
+            this.hayAporteEnCuentaActiva = aportadoCuentaActivaConv != null
+                    && aportadoCuentaActivaConv.compareTo(BigDecimal.ZERO) > 0;
+            this.pct = pct;
+            this.pctBar = pctBar;
+            this.metaAlcanzada = metaAlcanzada;
+        }
+
+        public Fondo getFondo() { return fondo; }
+        public BigDecimal getAportado() { return aportado; }
+        public BigDecimal getMeta() { return meta; }
+        public BigDecimal getAportadoConv() { return aportadoConv; }
+        public BigDecimal getMetaConv() { return metaConv; }
+        public BigDecimal getAportadoCuentaActivaConv() { return aportadoCuentaActivaConv; }
+        public boolean isHayAporteEnCuentaActiva() { return hayAporteEnCuentaActiva; }
+        public double getPct() { return pct; }
+        public double getPctBar() { return pctBar; }
+        public boolean isMetaAlcanzada() { return metaAlcanzada; }
+    }
+}
