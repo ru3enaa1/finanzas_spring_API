@@ -11,6 +11,8 @@ public interface FondoRepository extends JpaRepository<Fondo, Integer> {
 
     List<Fondo> findByUsuarioOrderByNombreAsc(Usuario usuario);
 
+    List<Fondo> findByUsuarioAndActivoTrueOrderByNombreAsc(Usuario usuario);
+
     Optional<Fondo> findByIdAndUsuario(Integer id, Usuario usuario);
 
     boolean existsByUsuarioAndNombreIgnoreCase(Usuario usuario, String nombre);

@@ -1,112 +1,50 @@
 /* ============================================================
-   Presupuestos / Fondos — estilos compartidos
-   Usado por: gastos/lista.html, fondos/lista.html
-   Layout en layout.css
+   Fondos de ahorro — estilos especificos
+   Reusa header / pills / barras / modal de presupuestos.css y
+   transacciones.css. Solo redefine lo unico de fondos:
+   - Barras de color solido (no graduadas verde-rojo)
+   - Indicador visual de "meta alcanzada"
    ============================================================ */
 
-.form-section {
-  width: 100%;
-  max-width: 860px;
-  background: #060411;
-  padding: 30px;
-  border-radius: 20px;
-  margin-bottom: 40px;
-}
-.form-section h2 { margin-bottom: 20px; }
-
-.form-grid {
-  display: grid;
-  gap: 15px;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-}
-.form-grid label {
-  display: flex;
-  flex-direction: column;
-  font-size: 14px;
-  color: #dcd7f0;
-}
-.form-grid input,
-.form-grid select,
-.form-grid textarea {
-  margin-top: 8px;
-  padding: 10px;
-  border-radius: 12px;
-  border: none;
-  background: #3A345C;
-  color: #fff;
-}
-.form-grid textarea { resize: vertical; }
-.form-grid .full   { grid-column: 1 / -1; }
-
-.checkbox { display: flex; align-items: center; gap: 10px; font-size: 14px; }
-.checkbox input { width: auto; }
-
-.form-actions { grid-column: 1 / -1; display: flex; justify-content: flex-end; }
-.form-actions button {
-  padding: 10px 24px;
-  border: none;
-  border-radius: 20px;
-  background: #2E2A50;
-  color: #F0B54D;
-  cursor: pointer;
-  font-family: 'Roboto', sans-serif;
-  transition: background 0.3s;
-}
-.form-actions button:hover { background: #403b74; }
-
-.error { margin-top: 6px; font-size: 12px; color: #ff7675; }
-
-.list-section { width: 100%; max-width: 860px; }
-.list-section h2 { margin-bottom: 20px; }
-
-.cards {
-  display: grid;
-  gap: 20px;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-}
-.card {
-  background: #060411;
-  padding: 20px;
-  border-radius: 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-.card header { display: flex; justify-content: space-between; align-items: center; }
-
-.status { padding: 4px 12px; border-radius: 12px; font-size: 12px; }
-.status-active   { background: rgba(46, 204, 113, 0.15); color: #2ecc71; }
-.status-inactive { background: rgba(231, 76, 60, 0.2);   color: #e74c3c; }
-
-.progress-bar {
-  width: 100%; height: 10px;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 10px; overflow: hidden;
-}
-.progress-bar .progress-fill {
-  height: 100%; background: #F0B54D; transition: width 0.3s ease;
+/* ----------------------------------------------------------
+   Barra de progreso de un fondo: color solido del fondo
+   (sobreescribe los gradientes de presupuestos)
+   ---------------------------------------------------------- */
+.fondo-bar-fill {
+  height: 100%;
+  border-radius: 8px;
+  transition: width 0.4s ease;
+  min-width: 4px;
+  /* el color se aplica desde JS leyendo data-color (cada fondo elige el suyo) */
 }
 
-.sub-section { margin-top: 10px; }
-.sub-section h4 { margin-bottom: 8px; font-size: 16px; }
-
-.simple-list { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 6px; }
-.simple-list li {
-  background: rgba(255, 255, 255, 0.05);
-  padding: 8px 12px; border-radius: 12px; font-size: 14px;
+/* ----------------------------------------------------------
+   Estado "meta alcanzada" (100% o mas)
+   ---------------------------------------------------------- */
+.fondo-row.fondo-completo {
+  border: 1px solid rgba(196, 152, 90, 0.32);
+  box-shadow: 0 0 0 1px rgba(196, 152, 90, 0.12),
+              0 4px 18px rgba(196, 152, 90, 0.08);
 }
 
-.card-actions { display: flex; justify-content: flex-end; gap: 10px; }
-.card-actions .danger {
-  padding: 8px 18px; border: none; border-radius: 16px;
-  background: rgba(231, 76, 60, 0.2); color: #ff6b6b;
-  cursor: pointer; font-family: 'Roboto', sans-serif;
+.fondo-row.fondo-completo .pres-name-main {
+  color: #F0ECF8;
 }
-.card-actions .danger:hover { background: rgba(231, 76, 60, 0.35); }
 
-.btn {
-  display: inline-block; padding: 8px 18px;
-  background: #2E2A50; color: #F0B54D;
-  border-radius: 16px; text-decoration: none; transition: background 0.3s;
+.fondo-meta-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(196, 152, 90, 0.16);
+  color: #C4985A;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 10px;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
 }
-.btn:hover { background: #3b3763; }
+
+.fondo-meta-badge svg {
+  stroke: #C4985A;
+}

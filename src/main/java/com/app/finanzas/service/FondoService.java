@@ -57,6 +57,13 @@ public class FondoService {
         return fondoRepository.findByUsuarioOrderByNombreAsc(usuario);
     }
 
+    public List<Fondo> listarActivosPorUsuario(Usuario usuario) {
+        if (usuario == null) {
+            return Collections.emptyList();
+        }
+        return fondoRepository.findByUsuarioAndActivoTrueOrderByNombreAsc(usuario);
+    }
+
     public boolean existeNombreParaUsuario(Usuario usuario, String nombre) {
         return fondoRepository.existsByUsuarioAndNombreIgnoreCase(usuario, nombre);
     }

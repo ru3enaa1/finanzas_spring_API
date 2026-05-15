@@ -202,11 +202,33 @@ SET FOREIGN_KEY_CHECKS = 1;
 
 -- ============================================================
 -- FIN del schema base.
---
--- Para instalaciones existentes que vengan de versiones previas,
--- consultar los archivos de migracion en database/migrations/
--- (v3 nombre en cuenta, v4 transaccion timestamps, v5 saldo_inicial,
--- v6 unificar gasto_fijo -> presupuesto). No los ejecutes si estas
--- instalando desde cero, ya que las tablas arriba ya estan al ultimo
--- estado.
 -- ============================================================
+
+-- ============================================================
+-- MIGRACIONES PARA INSTALACIONES EXISTENTES
+-- ============================================================
+-- Si vienes de una version previa, ejecuta el bloque correspondiente.
+-- Para instalaciones nuevas, las tablas arriba ya estan al ultimo estado.
+-- ============================================================
+
+-- ============================================================
+-- Migracion v7: bolsas de ahorro mejoradas
+--   - fondo: color (visual), descripcion (opcional), activo (archivar sin borrar)
+--   - transaccion.fondo_id: vincula transacciones tipo GASTO a un fondo (aporte)
+--
+-- Modelo: aporte como GASTO real (modelo A)
+--   Aportar $X a un fondo genera una transaccion GASTO categoria
+--   'Ahorro: [nombre]'. El saldo de la cuenta activa baja. El fondo
+--   acumula su monto_aportado en RegistroFondo del mes.
+-- ============================================================
+ALTER TABLE `fondo`
+    ADD COLUMN IF NOT EXISTS `color` VARCHAR(20) NOT NULL DEFAULT '#5B8DEF',
+    ADD COLUMN IF NOT EXISTS `descripcion` VARCHAR(200) DEFAULT NULL,
+    ADD COLUMN IF NOT EXISTS `activo` TINYINT(1) NOT NULL DEFAULT 1;
+
+ALTER TABLE `transaccion`
+    ADD COLUMN IF NOT EXISTS `fondo_id` INT DEFAULT NULL;
+
+ALTER TABLE `transaccion`
+    ADD CONSTRAINT `fk_transaccion_fondo`
+    FOREIGN KEY (`fondo_id`) REFERENCES `fondo`(`id`) ON DELETE SET NULL;

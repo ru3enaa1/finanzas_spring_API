@@ -1,12 +1,15 @@
 package com.app.finanzas.service;
 
+import com.app.finanzas.entity.Fondo;
 import com.app.finanzas.entity.Presupuesto;
 import com.app.finanzas.entity.PresupuestoPeriodo;
+import com.app.finanzas.entity.RegistroFondo;
 import com.app.finanzas.entity.TipoTransaccion;
 import com.app.finanzas.entity.Transaccion;
 import com.app.finanzas.entity.Usuario;
 import com.app.finanzas.repository.CuentaRepository;
 import com.app.finanzas.repository.PresupuestoPeriodoRepository;
+import com.app.finanzas.repository.RegistroFondoRepository;
 import com.app.finanzas.repository.TransaccionRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,13 +27,16 @@ public class TransaccionService {
     private final TransaccionRepository transaccionRepository;
     private final CuentaRepository cuentaRepository;
     private final PresupuestoPeriodoRepository presupuestoPeriodoRepository;
+    private final RegistroFondoRepository registroFondoRepository;
 
     public TransaccionService(TransaccionRepository transaccionRepository,
                               CuentaRepository cuentaRepository,
-                              PresupuestoPeriodoRepository presupuestoPeriodoRepository) {
+                              PresupuestoPeriodoRepository presupuestoPeriodoRepository,
+                              RegistroFondoRepository registroFondoRepository) {
         this.transaccionRepository = transaccionRepository;
         this.cuentaRepository = cuentaRepository;
         this.presupuestoPeriodoRepository = presupuestoPeriodoRepository;
+        this.registroFondoRepository = registroFondoRepository;
     }
 
     public Transaccion registrar(Transaccion transaccion) {
@@ -40,6 +46,7 @@ public class TransaccionService {
         Transaccion guardada = transaccionRepository.save(transaccion);
         recalcularSaldoCuenta(guardada.getCuenta().getId());
         actualizarPeriodoPresupuesto(guardada, true);
+        actualizarRegistroFondo(guardada, true);
         return guardada;
     }
 
@@ -53,9 +60,43 @@ public class TransaccionService {
         transaccionRepository.findById(id).ifPresent(transaccion -> {
             Integer cuentaId = transaccion.getCuenta().getId();
             actualizarPeriodoPresupuesto(transaccion, false);
+            actualizarRegistroFondo(transaccion, false);
             transaccionRepository.delete(transaccion);
             recalcularSaldoCuenta(cuentaId);
         });
+    }
+
+    /**
+     * Suma/resta del RegistroFondo del mes cuando se crea o elimina una transaccion GASTO
+     * vinculada a un fondo (un "aporte" a la bolsa de ahorro).
+     */
+    private void actualizarRegistroFondo(Transaccion t, boolean sumar) {
+        Fondo f = t.getFondo();
+        if (f == null || t.getTipo() != TipoTransaccion.GASTO || t.getFecha() == null) {
+            return;
+        }
+        int anio = t.getFecha().getYear();
+        int mes = t.getFecha().getMonthValue();
+        BigDecimal delta = sumar ? t.getMonto() : t.getMonto().negate();
+
+        RegistroFondo registro = registroFondoRepository
+                .findByFondo_IdAndAnioAndMes(f.getId(), anio, mes)
+                .orElseGet(() -> {
+                    RegistroFondo nuevo = new RegistroFondo();
+                    nuevo.setFondo(f);
+                    nuevo.setAnio(anio);
+                    nuevo.setMes(mes);
+                    nuevo.setMontoAportado(BigDecimal.ZERO);
+                    return nuevo;
+                });
+
+        BigDecimal actual = registro.getMontoAportado() != null ? registro.getMontoAportado() : BigDecimal.ZERO;
+        BigDecimal nuevoAportado = actual.add(delta);
+        if (nuevoAportado.compareTo(BigDecimal.ZERO) < 0) {
+            nuevoAportado = BigDecimal.ZERO;
+        }
+        registro.setMontoAportado(nuevoAportado);
+        registroFondoRepository.save(registro);
     }
 
     /**
